@@ -2,7 +2,9 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
-## Unreleased
+## 1.0.0rc4 (2026-11-09)
+
+The last fix planned for 1.0.0. Upgrading from 1.0.0rc3: read the note marked Upgrading below. Upgrading from 1.0.0rc2 or older: read the notes of 1.0.0rc3 too.
 
 ### Changed
 

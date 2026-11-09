@@ -137,9 +137,10 @@ Before the release candidate:
 - [x] Failure-injection tests: the Hub is down or slow during a run (the run completes, the log is kept, one warning); an input file is missing; the browser closes in the middle of a loop (Finally still runs, no browser process is left)
 - [x] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
 - [x] Release `1.0.0rc2` (2026-11-02). `1.0.0rc1` went only to TestPyPI: testing it on a clean Ubuntu user and with a flow built by an AI assistant found #145 and logs written to the current folder, fixed in rc2
-- [ ] Release `1.0.0rc3` (2026-11-06) with the fixes from the review of rc2 (#159 to #174), which settle behavior that is frozen for 1.x. #166 follows in a later release candidate
+- [x] Release `1.0.0rc3` (2026-11-06) with the fixes from the review of rc2 (#159 to #174), which settle behavior that is frozen for 1.x. Soak on the Raspberry Pi, 2026-11-06 to 2026-11-08: every run on time and recorded, no crash, worker memory steady at about 109 MB
+- [ ] Release `1.0.0rc4` (2026-11-09) with #166: a stopped run finishes its step and runs Finally
 
-Check of 1.0.0rc3 (2026-11-06 to 2026-11-08):
+Check of 1.0.0rc4 (from 2026-11-09):
 - [ ] Soak: the Raspberry Pi worker runs the offline examples (`hello`, `quote_requests`, the tutorial solution) every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind; a baseline (time and memory of a 100-item loop on the Raspberry Pi) is written in `docs/examples.md`
 - [ ] `bot_fx_rate` runs on its cron schedule on the worker
 - [ ] Ubuntu Hub: every run and failure is recorded, and `report`, `logs`, and `query` answer correctly

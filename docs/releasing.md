@@ -65,16 +65,16 @@ Released version numbers can never be reused on PyPI or TestPyPI. If something i
 2. **Merge `dev` into `main`** through the usual release pull request. CI builds the packages, checks their metadata, and installs them in a clean environment.
 3. **Try it on TestPyPI:** in GitHub, open **Actions**, then **Release**, then **Run workflow** on `main`. When it finishes, check in a new virtual environment. Download only the three Kinenix packages from TestPyPI and take every other package from PyPI: anyone can upload to TestPyPI, and it holds broken copies of common packages (for example a `FASTAPI 1.0` that pip would pick with `--extra-index-url`).
    ```bash
-   pip download --no-deps -d testpypi --index-url https://test.pypi.org/simple/ kinenix==1.0.0rc3 kinenix-hub==1.0.0rc3 kinenix-worker==1.0.0rc3
-   pip install --find-links testpypi "kinenix[hub,worker]==1.0.0rc3"
+   pip download --no-deps -d testpypi --index-url https://test.pypi.org/simple/ kinenix==1.0.0rc4 kinenix-hub==1.0.0rc4 kinenix-worker==1.0.0rc4
+   pip install --find-links testpypi "kinenix[hub,worker]==1.0.0rc4"
    kinenix version
    kinenix-worker --version
    ```
 4. **Publish to PyPI** by tagging `main`:
    ```bash
    git switch main && git pull
-   git tag v1.0.0rc3
-   git push origin v1.0.0rc3
+   git tag v1.0.0rc4
+   git push origin v1.0.0rc4
    ```
    The workflow builds again, checks that the tag matches the package version, and publishes all three packages.
 5. Check https://pypi.org/project/kinenix/, `kinenix-hub`, and `kinenix-worker`, then install from PyPI in a clean environment.
