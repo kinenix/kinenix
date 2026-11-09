@@ -149,7 +149,7 @@ Every `kinenix` and `kinenix-worker` command ends with one of these codes, so a 
 | 6 | The Hub cannot be reached, or refused the key (`kinenix connect`, `kinenix hub status`, `logs`, `query --url`) | Yes, later |
 | 7 | Not found: no such flow, file, example, action, run id, table, or view | No |
 | 8 | The run finished, but items or steps failed on the way (`on_error: continue` or `next_item`); they are in the summary, the log, and on the Hub, where the run shows as partial | No; a person checks the failed items |
-| 130 | Stopped with Ctrl+C | |
+| 130 | Stopped on request: Ctrl+C or SIGTERM (`systemctl stop`). The current step ended, `## Finally` ran, and the run is recorded as interrupted | Yes, when you want it to run |
 
 ```powershell
 kinenix run tiph_quotes

@@ -17,6 +17,7 @@ from .engine.markdown import (
     load_flow,
     markdown_issues,
 )
+from .engine.stopping import install_signal_handlers
 from .engine.validation import deprecated_uses, leftover_json_flows, validate_flow, validate_subflows
 from .scaffold import (
     DEFAULT_EXAMPLE,
@@ -568,6 +569,7 @@ def main():
 
         logger = ExecutionLogger(log_dir=args.log_dir, flow_path=resolved_path)
         interpreter = FlowInterpreter(logger=logger)
+        install_signal_handlers()
         try:
             context = interpreter.run_flow(flow_def, initial_vars=extra_vars)
         except KeyboardInterrupt:

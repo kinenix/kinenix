@@ -52,7 +52,7 @@ class Execution(Base):
     worker_id = Column(String(64), default="local-worker", index=True)
     run_id = Column(String(64), nullable=True)
     flow_name = Column(String(128), nullable=False, index=True)
-    status = Column(String(32), default="success", index=True)  # success, partial, failed, running
+    status = Column(String(32), default="success", index=True)  # success, partial, failed, interrupted, running
     start_time = Column(DateTime, default=utc_now)
     end_time = Column(DateTime, nullable=True)
     duration_seconds = Column(Float, default=0.0)

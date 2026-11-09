@@ -128,7 +128,8 @@ class WorkerRunner:
         result = {
             "job_id": job_id,
             "flow_name": flow_def.name,
-            "status": "failed" if ctx.has_error else "partial" if ctx.is_partial else "success",
+            "status": ("interrupted" if ctx.interrupted else "failed" if ctx.has_error
+                       else "partial" if ctx.is_partial else "success"),
             "duration_seconds": duration,
             "steps_total": len(flow_def.steps),
             # Top-level steps only, to match steps_total; loop iterations would otherwise give e.g. "40/20"

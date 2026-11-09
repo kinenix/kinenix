@@ -124,7 +124,9 @@ class ExecutionLogger:
         self.logger.info(f"Total Steps: {m.total_steps} (Success: {m.successful_steps}, Failed: {m.failed_steps}, Skipped: {m.skipped_steps})")
         self.logger.info(f"Total Duration: {m.total_duration_seconds:.2f}s")
         details = context.failure_details
-        if context.has_error and details:
+        if context.interrupted:
+            self.logger.info("Result: INTERRUPTED, stopped on request")
+        elif context.has_error and details:
             self.logger.info(f"Result: FAILED at step [{details.failed_step_id}] '{details.failed_step_name}'"
                              f"{_in_section(details.section)}")
         elif context.is_partial:
@@ -147,7 +149,8 @@ class ExecutionLogger:
         if self.log_dir:
             try:
                 time_str = context.start_time.strftime("%H%M%S")
-                status_str = "failed" if context.has_error else "partial" if context.is_partial else "success"
+                status_str = ("interrupted" if context.interrupted else "failed" if context.has_error
+                              else "partial" if context.is_partial else "success")
 
                 target_dir = self._run_dir(context)
                 target_dir.mkdir(parents=True, exist_ok=True)
