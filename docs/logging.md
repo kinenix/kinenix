@@ -26,7 +26,7 @@ One run writes one log, also when it calls subflows: the steps of every subflow 
 The live log (`.jsonl`) gets one JSON line per step as soon as the step ends. Its path is `${run.log_path}`, so a `## On Error` or `## Finally` step can attach the log of the run so far, for example to an error e-mail. The JSON log at the end is the complete record: the live log is not changed afterwards, so a subflow failure shows the subflow's own `handled` value there.
 
 ### Key Benefits:
-- **Instant Triage:** Log filenames immediately show the execution time and status (`_success`, `_partial`, or `_failed`), allowing developers and operations teams to spot failures without opening files.
+- **Instant Triage:** Log filenames immediately show the execution time and status (`_success`, `_partial`, `_failed`, or `_interrupted`), allowing developers and operations teams to spot failures without opening files.
 - **Logs stay with the flow:** whichever folder a command is started from, `resolve_log_dir` writes to `logs/` at the root of the git repository that holds the flow, or to `logs/` in the flow's own folder when it is not in a repository. `--log-dir` and `KINENIX_LOG_DIR` choose another folder. A worker writes the log of a `--sandbox` run next to the original bundle.
 
 ---

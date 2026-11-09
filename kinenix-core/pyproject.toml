@@ -31,8 +31,8 @@ dependencies = [
 
 [project.optional-dependencies]
 # One-command installs; all Kinenix packages are released together with the same version
-hub = ["kinenix-hub>=1.0.0rc3"]
-worker = ["kinenix-worker>=1.0.0rc3"]
+hub = ["kinenix-hub>=1.0.0rc4"]
+worker = ["kinenix-worker>=1.0.0rc4"]
 dev = [
     "pytest>=7.0.0"
 ]

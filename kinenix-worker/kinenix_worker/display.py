@@ -60,7 +60,7 @@ def print_info(console: Console, info: Dict[str, Any], client: HubClient) -> Non
 
 def print_run_result(console: Console, res: Dict[str, Any]) -> None:
     failed = res["has_error"]
-    color = "red" if failed else "dark_orange" if res["status"] == "partial" else "green"
+    color = "red" if failed else "dark_orange" if res["status"] in ("partial", "interrupted") else "green"
     status = Text(res["status"].upper(), style=f"bold {color}")
 
     grid = _key_value_grid()

@@ -23,7 +23,7 @@ classifiers = [
 ]
 requires-python = ">=3.12"
 dependencies = [
-    "kinenix>=1.0.0rc3",
+    "kinenix>=1.0.0rc4",
     "psutil>=5.9.0",
     "requests>=2.28.0",
     "rich>=13.0.0"

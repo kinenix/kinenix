@@ -66,6 +66,7 @@ class ExecutionContext(BaseModel):
     metrics: ExecutionMetrics = Field(default_factory=ExecutionMetrics, description="Aggregated run metrics and telemetry")
     is_completed: bool = Field(default=False, description="Whether the workflow completed all steps successfully")
     has_error: bool = Field(default=False, description="Whether an unhandled error occurred during execution")
+    interrupted: bool = Field(default=False, description="Whether the run was stopped on request before its steps ended")
     failure_details: Optional[FailureDetails] = Field(default=None, description="Structured root-cause diagnosis if has_error is true")
 
     @property
@@ -74,7 +75,7 @@ class ExecutionContext(BaseModel):
         The run finished, but work items or steps failed on the way (handled by on_error: continue or next_item).
         Same rule as run_status in kinenix-hub (services/run_records.py), so the exit code and the Hub agree.
         """
-        if self.has_error:
+        if self.has_error or self.interrupted:
             return False
         return (self.items or {}).get("failed", 0) > 0 or any(r.status == "failed" for r in self.step_results)
 

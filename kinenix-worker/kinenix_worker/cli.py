@@ -3,6 +3,7 @@ import json
 import sys
 
 from kinenix import exit_codes
+from kinenix.engine.stopping import install_signal_handlers
 from pathlib import Path
 
 from rich.console import Console
@@ -96,6 +97,7 @@ def main():
 
         # Keep heartbeats going during long flows so the worker is not shown as offline mid-run
         start_heartbeats()
+        install_signal_handlers()
         try:
             res = runner.execute_flow(
                 flow_path_or_alias=args.flow_path,

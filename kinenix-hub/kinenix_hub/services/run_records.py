@@ -293,8 +293,11 @@ def build_run_records(payload: Dict[str, Any], run: Dict[str, Any]) -> RunRecord
 def run_status(payload: Dict[str, Any]) -> str:
     """
     failed: the run stopped. partial: it finished, but work items or steps failed on the way (handled by
-    on_error: continue or next_item). success: nothing failed (#110).
+    on_error: continue or next_item). success: nothing failed (#110). interrupted: it was stopped on request,
+    which is not a failure, whatever its Finally did (#166).
     """
+    if payload.get("interrupted"):
+        return "interrupted"
     if payload.get("has_error"):
         return "failed"
     items = payload.get("items") if isinstance(payload.get("items"), dict) else {}
