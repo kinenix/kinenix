@@ -45,7 +45,7 @@ Layer 1 comes first; layers 2 to 4 only call it.
 | 6 | The Hub or another service cannot be reached, or refused the key | Yes, later |
 | 7 | Not found: no such flow, run id, or view | No |
 | 8 | The run finished, but items or steps failed on the way (`on_error: continue` or `next_item`) | No; a person checks the failed items |
-| 130 | Interrupted (Ctrl+C) | |
+| 130 | Interrupted (Ctrl+C or SIGTERM) | |
 
 A run that stops in `## Steps` takes the code of that failure; a failure in `## Finally` after successful steps is 1. Built in 1.0.0 (`kinenix/exit_codes.py`); the user reference is [cli_guide.md, Exit Codes](../cli_guide.md#28-exit-codes).
 

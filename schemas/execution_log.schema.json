@@ -377,6 +377,12 @@
       "title": "Is Completed",
       "type": "boolean"
     },
+    "interrupted": {
+      "default": false,
+      "description": "Whether the run was stopped on request before its steps ended",
+      "title": "Interrupted",
+      "type": "boolean"
+    },
     "has_error": {
       "default": false,
       "description": "Whether an unhandled error occurred during execution",

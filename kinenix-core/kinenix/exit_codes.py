@@ -15,7 +15,7 @@ NEWER_KINENIX = 5  # The flow needs a newer Kinenix (> Requires:)
 UNREACHABLE = 6    # The Hub or another service cannot be reached, or refused the key
 NOT_FOUND = 7      # No such flow, run, execution, file, table, or view
 PARTIAL = 8        # The run finished, but items or steps failed on the way (on_error continue or next_item)
-INTERRUPTED = 130  # Stopped with Ctrl+C
+INTERRUPTED = 130  # Stopped on request: Ctrl+C or SIGTERM
 
 # Failures that mean the flow itself must be fixed, wherever they are raised during a run
 _INVALID_FLOW_EXCEPTIONS = {"ExpressionError", "ExpressionSyntaxError", "ConditionError"}
@@ -23,6 +23,8 @@ _INVALID_FLOW_EXCEPTIONS = {"ExpressionError", "ExpressionSyntaxError", "Conditi
 
 def for_run(context: Any) -> int:
     """The exit code of a finished run, from its ExecutionContext."""
+    if getattr(context, "interrupted", False):
+        return INTERRUPTED
     if not getattr(context, "has_error", False):
         return PARTIAL if getattr(context, "is_partial", False) else OK
     details = getattr(context, "failure_details", None)

@@ -16,7 +16,7 @@ from rich.text import Text
 from .settings_file import hash_password, read_saved_settings, write_settings
 
 WORKER_STATUS_STYLES = {"online": "green", "busy": "yellow", "offline": "red"}
-EXECUTION_STATUS_STYLES = {"success": "green", "partial": "dark_orange", "failed": "red", "running": "yellow"}
+EXECUTION_STATUS_STYLES = {"success": "green", "partial": "dark_orange", "interrupted": "yellow", "failed": "red", "running": "yellow"}
 STEP_STATUS_STYLES = {"success": "green", "failed": "red", "skipped": "dim"}
 
 
@@ -268,6 +268,8 @@ def print_status(console: Console, base_url: str, data: Dict[str, Any], now: Opt
             failure = e.get("ai_summary") or e.get("error_message") or e.get("failed_step_name") or "failed"
         elif e.get("status") == "partial":
             failure = partial_text(e.get("details"))
+        elif e.get("status") == "interrupted":
+            failure = "stopped on request"
         executions.add_row(
             Text(short_id(e.get("id")), style="dim"),
             _ago(e.get("created_at"), now),

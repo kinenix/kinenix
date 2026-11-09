@@ -376,6 +376,14 @@ A failing step inside On Error or Finally is recorded and the rest of that secti
 
 `> Requires: kinenix>=0.2.0b4` under the title is needed for flows with On Error or Finally: Kinenix 0.2.0b3 and older would run their steps as ordinary steps on every run, while newer versions refuse a flow that needs a version they are not. `kinenix validate` reports a missing line.
 
+**When a run is stopped:** Ctrl+C, `systemctl stop`, and `systemctl restart` ask the run to stop. The current step ends, the remaining steps are skipped, `## Finally` runs, the log is written, and the run reaches the Hub as `interrupted`, with exit code 130. `## On Error` does not run, because nothing failed. In a subflow, its own Finally runs first.
+
+- A step that waits, such as a page that loads, ends at its timeout. `logic.delay` ends at once.
+- A second Ctrl+C or SIGTERM stops the process at once: Finally is cut short and no final log is written.
+- `kinenix-worker daemon` starts no new run and waits up to 60 seconds for the running flows.
+- `systemctl stop` also ends the browser, so web steps in Finally may fail. Keep Finally to files, emails, and other work that needs no open page.
+- SIGKILL, a power cut, and `taskkill /F` on Windows cannot be handled: only the live `.jsonl` log remains.
+
 ### 3.3 `${error}` and `${run}`
 
 `${error}` describes the step that failed in `## Steps`, including one handled by `on_error: continue`. Failures inside On Error and Finally do not replace it. Values are redacted like logs ([logging.md](logging.md#redaction)).
@@ -402,7 +410,7 @@ When a step inside a subflow fails, the caller's `${error}` describes that inner
 | :--- | :--- |
 | `${run.id}` | Unique id of the run, such as `20261013T221502-qhzk`; use it in paths: `./output/${run.id}/`, or `"error_dir": "./output/errors/${run.id}"` in config |
 | `${run.flow}`, `${run.started}` | Flow name, start time |
-| `${run.status}` | `running` in Steps and On Error; `success` or `failed` in Finally |
+| `${run.status}` | `running` in Steps and On Error; `success`, `failed`, or `interrupted` in Finally |
 | `${run.log_path}` | The run's live log (one JSON line per finished step), for attaching to an error e-mail ([logging.md](logging.md)) |
 
 `error` and `run` are reserved variable names.

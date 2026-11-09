@@ -2,6 +2,12 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+### Changed
+
+- **A stopped run ends cleanly (#166):** Ctrl+C, `systemctl stop`, and `systemctl restart` used to end a run at once, with no `## Finally`, no final log, and nothing on the Hub. Now the current step ends, the remaining steps are skipped, `## Finally` runs, the log ends with `_interrupted.json`, and the Hub shows the status `interrupted`, which is not a failure. `## On Error` does not run. The exit code is 130, now also for SIGTERM. A second signal stops at once, and `kinenix-worker daemon` waits up to 60 seconds for running flows. Upgrading: Ctrl+C no longer stops at once; press it twice for that.
+
 ## 1.0.0rc3 (2026-11-06)
 
 Fixes from a review of 1.0.0rc2. Many of them change behavior that stays the same for all of 1.x, so they come before 1.0.0, and some flows need a small change: read the notes marked Upgrading below. Before upgrading a Hub, back up `hub.db`; the first start adds a column. `## Finally` when a run is stopped (#166) is not in this release.

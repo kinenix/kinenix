@@ -4,6 +4,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set
 
+from kinenix.engine.stopping import stop_requested
+
 from ..runner import WorkerRunner
 
 logger = logging.getLogger("kinenix_worker.trigger.watcher")
@@ -82,6 +84,9 @@ class FileWatcherTrigger:
                 continue
 
             logger.info(f"File watcher detected new file: {file_path}. Triggering flow: {self.flow_path}")
+
+            if stop_requested():
+                break  # The files left are found again at the next start
 
             injected_vars = dict(self.extra_vars)
             injected_vars["trigger_file_path"] = str(file_path.resolve())

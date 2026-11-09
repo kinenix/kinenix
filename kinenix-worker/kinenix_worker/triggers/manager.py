@@ -5,11 +5,16 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from kinenix.engine.stopping import clear_stop, install_signal_handlers, request_stop, stop_requested
+
 from .watcher import FileWatcherTrigger
 from .scheduler import CronSchedulerTrigger
 from ..runner import WorkerRunner
 
 logger = logging.getLogger("kinenix_worker.trigger.manager")
+
+# How long a stopping daemon waits for running flows, Finally included; below systemd's 90 seconds before SIGKILL
+STOP_WAIT_SECONDS = 60
 
 
 class TriggerManager:
@@ -87,15 +92,24 @@ class TriggerManager:
         logger.info(f"Started {len(self._threads)} triggers in background daemon.")
 
         if blocking:
+            install_signal_handlers()
             try:
-                while not self._stop_event.is_set():
+                while not self._stop_event.is_set() and not stop_requested():
                     time.sleep(0.5)
             except KeyboardInterrupt:
-                logger.info("Trigger manager received shutdown signal.")
-                self.stop()
+                pass
+            logger.info("Trigger manager received shutdown signal.")
+            self.stop()
 
     def stop(self) -> None:
+        """Starts no new run, and waits for the running flows to stop and run their Finally."""
         self._stop_event.set()
+        request_stop()
+        deadline = time.monotonic() + STOP_WAIT_SECONDS
         for t in self._threads:
-            t.join(timeout=2.0)
+            t.join(timeout=max(0.0, deadline - time.monotonic()))
+        running = sum(t.is_alive() for t in self._threads)
+        if running:
+            logger.warning(f"{running} flow(s) still running after {STOP_WAIT_SECONDS} seconds; stopping without them.")
+        clear_stop()
         logger.info("All triggers stopped.")

@@ -2,6 +2,7 @@ import time
 from typing import Any, Dict
 
 from .base import BaseAction
+from ..engine import stopping
 from .registry import register_action
 from ..models.context import ExecutionContext
 
@@ -26,7 +27,11 @@ class DelayAction(BaseAction):
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         seconds = float(parameters.get("seconds", 1.0))
-        time.sleep(seconds)
+        if (context.get_variable("__section__") or "steps") == "steps":
+            if stopping.wait(seconds):
+                raise stopping.RunStopped()  # The delay did not end, so the run is not finished, even on the last step
+        else:
+            time.sleep(seconds)
         return {"delayed_seconds": seconds}
 
 

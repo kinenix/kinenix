@@ -15,6 +15,8 @@ from .markdown import JSON_FLOW_NOT_RUN, SECTION_HEADINGS, markdown_to_flow
 from .redaction import NOT_SECRET_ENV, Redactor
 from .web_errors import explain as explain_web_error
 from .requires import requirement_problem
+from .stopping import RunStopped, stop_requested
+from .stopping import wait as wait_or_stop
 from .. import __version__
 from ..actions.registry import ActionRegistry
 from ..actions.flow_control import SubflowExecutionError, is_business_error
@@ -135,6 +137,7 @@ class FlowInterpreter:
     ):
         self.logger = logger or ExecutionLogger()
         self.max_depth = max_depth
+        self.finishing = False  # A subflow called from On Error or Finally runs to its end
         self.call_stack: List[str] = call_stack or []
         self.auto_close_browser = auto_close_browser
         self._step_map: Dict[str, Step] = {}
@@ -357,7 +360,7 @@ class FlowInterpreter:
         redactor.configure(context.get_variable("config"))
 
         # ${run}: one id per top-level run, shared with subflows (for paths such as ./output/${run.id}/).
-        # ${run.status} is running, then success or failed before Finally runs
+        # ${run.status} is running, then success, failed, or interrupted before Finally runs
         run_info = context.get_variable("run") if self.call_stack else None
         if not isinstance(run_info, dict) or not run_info.get("id"):
             started = local_now()
@@ -401,15 +404,20 @@ class FlowInterpreter:
                         break
                     self._execute_step(step, context)
                 context.is_completed = True
+            except RunStopped:
+                # Not a failure, so On Error does not run; Finally does
+                context.interrupted = True
+                run_info["status"] = "interrupted"
+                self.logger.logger.warning(f"{flow_def.name}: stopped on request; the remaining steps are skipped")
             except Exception as e:
                 context.has_error = True
                 self._flow_failed(e, context)
                 run_info["status"] = "failed"
                 self._run_section("on_error", flow_def.on_error_steps, context)
-            if not context.has_error:
+            if not context.has_error and not context.interrupted:
                 run_info["status"] = "success"
             self._run_section("finally", flow_def.finally_steps, context)
-            if context.has_error:
+            if context.has_error and not context.interrupted:
                 run_info["status"] = "failed"
         finally:
             self._cleanup_resources(context)
@@ -548,9 +556,15 @@ class FlowInterpreter:
             label = shown
         return str(label)[:200]
 
+    def _stop_if_requested(self, context: ExecutionContext) -> None:
+        """Ends ## Steps when a stop was requested. On Error and Finally, and what they call, run to their end."""
+        if stop_requested() and not self.finishing and (context.get_variable("__section__") or "steps") == "steps":
+            raise RunStopped()
+
     def _execute_step(self, step: Step, context: ExecutionContext) -> None:
         if context.get_variable("__early_exit__"):
             return
+        self._stop_if_requested(context)
 
         self.logger.log_step_start(step.id, step.name, step.action)
         start_time = local_now()
@@ -635,6 +649,8 @@ class FlowInterpreter:
                 self._record(context, result, step)
                 return
             except Exception as e:
+                # A stop also ends the browser, so what failed here is usually the stop, not the step
+                self._stop_if_requested(context)
                 last_error = e
                 # Business errors (bad data, a rule not met) fail the same way on every attempt
                 if attempt < max_retries and not is_business_error(e):
@@ -647,7 +663,8 @@ class FlowInterpreter:
                         f"{self.logger.redactor.redact_text(str(e))}. "
                         f"Retrying in {retry_interval}s..."
                     )
-                    time.sleep(retry_interval)
+                    wait_or_stop(retry_interval)
+                    self._stop_if_requested(context)
                 else:
                     break
 
@@ -1034,12 +1051,16 @@ class FlowInterpreter:
             call_stack=new_stack,
             auto_close_browser=self.auto_close_browser
         )
+        child_interpreter.finishing = self.finishing or (context.get_variable("__section__") or "steps") != "steps"
 
         child_context = child_interpreter.run_flow(subflow_def, initial_vars=child_vars)
         self._take_browser_back(context, child_context, shared=evaluated_params.get("propagate_sessions", True))
         # The subflow's steps are part of this run's record, in the order they ran (#62)
         context.step_results.extend(child_context.step_results)
         context.set_variable("__failures__", self._failure_count(context) + self._failure_count(child_context))
+
+        if child_context.interrupted:
+            raise RunStopped()  # The subflow ran its own Finally; now this flow stops
 
         if child_context.has_error:
             failed_id = child_context.failure_details.failed_step_id if child_context.failure_details else "unknown"

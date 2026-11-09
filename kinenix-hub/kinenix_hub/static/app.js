@@ -28,6 +28,11 @@ function isPartial(e) {
   return !e.has_error && e.status === 'partial';
 }
 
+// Stopped on request: not a failure and not a success (#166)
+function isInterrupted(e) {
+  return e.status === 'interrupted';
+}
+
 function partialText(e) {
   const d = e.details || {};
   if (d.items_total && d.items_failed) return `${d.items_failed} จาก ${d.items_total} รายการไม่สำเร็จ`;
@@ -37,7 +42,7 @@ function partialText(e) {
 
 function renderKPIs(executions) {
   const total = executions.length;
-  const failed = executions.filter(e => e.has_error || e.status === 'failed').length;
+  const failed = executions.filter(e => !isInterrupted(e) && (e.has_error || e.status === 'failed')).length;
   const partial = executions.filter(isPartial).length;
   const success = executions.filter(e => e.status === 'success').length;
   const rate = total > 0 ? Math.round((success / total) * 100) : 100;
@@ -112,7 +117,7 @@ function renderExecutions(executions) {
   let filtered = executions;
 
   if (currentFilter === 'failed') {
-    filtered = executions.filter(e => e.has_error || e.status === 'failed');
+    filtered = executions.filter(e => !isInterrupted(e) && (e.has_error || e.status === 'failed'));
   } else if (currentFilter === 'partial') {
     filtered = executions.filter(isPartial);
   } else if (currentFilter === 'success') {
@@ -131,8 +136,10 @@ function renderExecutions(executions) {
   }
 
   tbody.innerHTML = filtered.map(e => {
-    const isError = e.has_error || e.status === 'failed';
-    const statusPill = isError
+    const isError = !isInterrupted(e) && (e.has_error || e.status === 'failed');
+    const statusPill = isInterrupted(e)
+      ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-500/15 text-slate-300 border border-slate-500/30">หยุดตามคำสั่ง</span>`
+      : isError
       ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-400 border border-rose-500/30">ล้มเหลว (${escapeHtml(e.failed_step_name || e.failed_step_id || 'Error')})</span>`
       : isPartial(e)
         ? `<span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">สำเร็จบางส่วน · ${escapeHtml(partialText(e))}</span>`
