@@ -137,34 +137,24 @@ def test_roundtrip_equality():
     assert reloaded_flow.steps[1].output_var == flow.steps[1].output_var
 
 
-def test_parse_rpachallenge_flow_md():
-    md_path = Path(__file__).resolve().parent.parent.parent / "flows" / "examples" / "rpachallenge" / "flow.md"
+def test_parse_quote_requests_flow_md():
+    md_path = Path(__file__).resolve().parent.parent.parent / "flows" / "examples" / "quote_requests" / "flow.md"
     assert md_path.exists(), f"Missing reference flow.md at {md_path}"
 
     flow = load_flow(md_path)
-    assert flow.name == "RPA Challenge Solver"
+    assert flow.name == "Motor Insurance Quote Requests"
     assert flow.version == "1.0.0"
-    assert "non_programmers" in flow.variables
-    assert len(flow.steps) >= 6
+    assert {"packages", "failed"} <= set(flow.variables)
+    assert [s.action for s in flow.steps] == ["csv.read", "flow.fail", "logic.loop", "csv.write", "csv.write", "email.send"]
+    assert len(flow.on_error_steps) == 2 and len(flow.finally_steps) == 1
 
-    # Step 1: web.open
-    assert flow.steps[0].action == "web.open"
-    assert flow.steps[0].parameters["url"] == "${config.website}"
-    assert flow.steps[0].parameters["headless"] is False
-
-    # Step 4: logic.loop with nested logic.if
-    loop_step = flow.steps[3]
-    assert loop_step.action == "logic.loop"
-    assert loop_step.sub_steps is not None
-    assert len(loop_step.sub_steps) == 1  # logic.if
-
-    if_step = loop_step.sub_steps[0]
-    assert if_step.action == "logic.if"
-    assert if_step.parameters["operator"] == "equals"
-    assert if_step.sub_steps is not None
-    assert len(if_step.sub_steps) == 8  # 7 web.type fields + Submit button
-    assert if_step.else_steps is not None
-    assert len(if_step.else_steps) == 1  # logic.append
+    # Step 3: a loop whose sub-steps skip an item, call a subflow, and collect results
+    loop_step = flow.steps[2]
+    assert [s.action for s in loop_step.sub_steps] == [
+        "logic.append", "flow.fail", "logic.set_variable", "flow.call", "logic.append", "logic.append"]
+    skip, call = loop_step.sub_steps[1], loop_step.sub_steps[3]
+    assert skip.condition and skip.error_handler.on_error == "next_item"
+    assert call.error_handler.on_error == "continue"
 
 
 def test_compile_and_export_cli_functions(tmp_path):

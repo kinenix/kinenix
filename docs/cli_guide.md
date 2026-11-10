@@ -80,11 +80,10 @@ kinenix run demo
 | :--- | :--- |
 | `hello` | Builds a greeting table from `config.json` and writes a CSV; the quickest installation check |
 | `bot_fx_rate` | Bank of Thailand transfer rates for chosen currencies and dates to CSV, with email (needs a browser) |
-| `rpachallenge` | Fills the RPA Challenge form from an Excel file (needs a browser) |
 | `quote_requests` | Enters quote requests from a CSV into a made-up insurer's form and collects the packages; failed requests are listed with their reasons (needs a browser, no internet) |
 | `first_flow` | The tutorial: finished `requirements.md`, an empty `flow.md` for your AI assistant to build, and saved shop pages; the solution stays in the repository so an assistant cannot copy it ([tutorial.md](tutorial.md)) |
 
-The examples are copies of `flows/examples/` in the repository, kept identical by `.github/scripts/sync_examples.py` and a test. Each has the `requirements.md` it was built from, as a model for your own.
+The examples are copies of `flows/examples/` in the repository, kept identical by `.github/scripts/sync_examples.py` and a test. Examples that need a real website, such as the RPA Challenge, are in [kinenix/examples](https://github.com/kinenix/examples). Each has the `requirements.md` it was built from, as a model for your own.
 
 **To refresh the AI assistant instructions of an older project**, so its assistant follows the current rules (for example `on_error: next_item`, no `flow.json`):
 
@@ -124,13 +123,13 @@ Executes an automation flow using the Smart Flow Resolver. You can specify a flo
 
 ```powershell
 # Run by alias or bundle name
-kinenix run rpachallenge
+kinenix run quote_requests
 
 # Run by namespace
-kinenix run examples/rpachallenge
+kinenix run examples/quote_requests
 
 # Run by direct file path
-kinenix run flows/examples/rpachallenge
+kinenix run flows/examples/quote_requests
 ```
 
 The first line `kinenix run` prints is `Run <run_id>`, for example `Run 20261028T101500-abcd`. The same id is `${run.id}` inside the flow, is part of the log file names, and is shown on the Hub; `kinenix hub logs <run_id>` shows the steps of that run.
@@ -164,7 +163,7 @@ if ($LASTEXITCODE -eq 3) { Write-Output "The data did not pass; see the run on t
 Pass external variables or runtime overrides to a flow as a JSON string:
 
 ```powershell
-kinenix run rpachallenge --vars "{\"target_url\": \"https://rpachallenge.com/\"}"
+kinenix run quote_requests --vars "{\"config\": {\"dry_run\": true}}"
 ```
 
 Inside the flow, these variables can be accessed using the standard expression syntax `${target_url}`.
@@ -179,7 +178,7 @@ kinenix run tiph_quotes --config config/test.json
 By default, Kinenix writes structured JSON logs into `logs/` of the flow's project folder, or of the git repository that holds the project, whichever folder the command is started from. You can override this location using `--log-dir` or `KINENIX_LOG_DIR`:
 
 ```powershell
-kinenix run rpachallenge --log-dir "./custom_logs"
+kinenix run quote_requests --log-dir "./custom_logs"
 ```
 
 ### 3.3 Send Telemetry to the Hub (`kinenix connect`, `--hub`)
@@ -194,7 +193,7 @@ For one run only, `--hub` sets the Hub URL. If the Hub requires an API key and n
 
 ```powershell
 $env:KINENIX_HUB_API_KEY = "<key>"
-kinenix run rpachallenge --hub http://localhost:8080
+kinenix run quote_requests --hub http://localhost:8080
 ```
 
 See the [Kinenix Hub Guide](hub.md#2-worker-authentication) for setup details.

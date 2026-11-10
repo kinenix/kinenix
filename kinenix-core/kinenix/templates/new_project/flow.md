@@ -1,6 +1,7 @@
 # {{title}}
 > Description: Replace with one sentence from requirements.md.
 > Version: 0.1.0
+> Requires: kinenix>={{version}}
 
 ## Steps
 

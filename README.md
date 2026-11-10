@@ -9,7 +9,7 @@
 > **Open-source Python framework for automation flows written in Markdown.**  
 > Describe the task, let your AI assistant write the flow, then run it on any PC or Raspberry Pi. Free unattended workers and a self-hosted Hub for every run.
 
-> **Status: 1.0 release candidate.** From 1.0.0, the `flow.md` format, the CLI commands and exit codes, the log format, and the Hub's data stay compatible for all of 1.x ([compatibility.md](docs/compatibility.md)). Feedback and contributions are welcome.
+> **Status: stable (1.x).** The `flow.md` format, the CLI commands and exit codes, the log format, and the Hub's data stay compatible for all of 1.x ([compatibility.md](docs/compatibility.md)). Feedback and contributions are welcome.
 
 ---
 
@@ -138,11 +138,11 @@ kinenix-worker info
 # List available flows (clean, deduplicated view)
 kinenix list
 
-# Run the RPA Challenge benchmark (auto-compiles flow.md if needed)
-kinenix run rpachallenge
+# Run an example (copy it first with: kinenix init demo --example quote_requests)
+kinenix run demo
 
 # Run with unattended worker daemon
-kinenix-worker run flows/examples/rpachallenge/
+kinenix-worker run demo
 ```
 
 ---

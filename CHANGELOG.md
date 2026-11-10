@@ -2,6 +2,43 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## 1.0.0 (2026-11-10)
+
+The stable core. From this version, the `flow.md` format, action names and parameters, CLI commands, exit codes, the log format, and the Hub's API and views stay compatible for all of 1.x ([docs/compatibility.md](docs/compatibility.md)). It is 1.0.0rc4 after a 24-hour soak on a Raspberry Pi and an install as a new Linux user, with the changes below.
+
+### Upgrading from 0.2.0b4
+
+The notes of each release since 0.2.0b4, in one place. The release notes below have the details.
+
+- **Python 3.12 or newer** (1.0.0rc1). On 3.10 or 3.11, pip keeps installing 0.5.0b1: create a new virtual environment with Python 3.12 or newer first.
+- **Back up `hub.db` before the first start of the new Hub;** it adds columns. A `hub.db` from Hub 0.2.0b3 or older that holds runs must be started once with Hub 1.0.0rc2 first ([docs/hub.md](docs/hub.md), section 6.1).
+- **Upgrade every worker before deploying flows that use newer features,** and add `> Requires: kinenix>=1.0.0` to them; older versions run expressions and `on_error: next_item` wrongly without an error.
+- **Exit codes:** 0 success, 1 technical failure, 2 wrong use, 3 business rule, 4 invalid flow, 5 newer Kinenix needed, 6 Hub unreachable, 7 not found, 8 partial run (finished with failed items or steps), 130 stopped. A script that treats every code other than 0 as a failure now also stops on partial runs.
+- **Output:** the first line of `kinenix run` is `Run <run_id>`. Logs go to the flow's project folder (or the git repository that holds it), not the current folder.
+- **Conditions** compare numbers as numbers, so `0012` without quotes also matches `12`: quote codes, as in `${branch} == '0012'`. A comparison with an empty or non-number side, and parentheses that group a condition, stop the run with exit code 4.
+- **Values in text** read `1200`, `true`, and JSON instead of Python's `1200.0`, `True`, and list format.
+- **`http.request`** fails on status 400 or higher; add `fail_on_error: false` to a step that checks `status_code` itself. **`round()`** rounds halves away from zero, like Excel.
+- **`kinenix validate`** ends with exit code 4 when `on_error`, `max_retries`, or `retry_interval` is on `logic.if`, `logic.loop`, or `flow.return`; move them to the steps inside.
+- **Subflows:** a parent flow continues on the page its subflow left (`propagate_sessions: false` keeps the old behavior), and a `flow.call` to `./` or `../` must name a file in the bundle.
+- **Stopping a run:** Ctrl+C or `systemctl stop` ends the current step and runs `## Finally`; press Ctrl+C twice to stop at once.
+- **A Hub without a key or password** answers only requests addressed to the machine itself; open the dashboard as `http://localhost:8080`.
+- **Deprecated** and removed in 2.0: `on_error: retry`, `fallback_step_id`, `kinenix export-md`, and the Orchestrator names. They warn when used.
+
+### Changed
+
+- **The RPA Challenge examples moved to [kinenix/examples](https://github.com/kinenix/examples):** `rpachallenge` and `rpachallenge_ocr` need a third-party website, so they cannot run offline in CI with Kinenix. `kinenix init --example rpachallenge` no longer exists; clone kinenix/examples instead. The Excel file of the challenge is no longer shipped: the flow downloads it from the website when it runs, and it now fills the form for all ten people.
+
+### Fixed
+
+- A project made with `kinenix init` had no `> Requires:` line, so `kinenix validate` reported a problem as soon as the flow used `## Finally`, expressions, or `on_error: next_item` (#196). The new `flow.md` names the Kinenix version that made it.
+- The link from `flow_markdown_spec.md` to the error handling section of `actions_reference.md` was broken on the website.
+
+### Documentation
+
+- `docs/examples.md`: how fast the engine is on a Raspberry Pi 4 and a laptop, with the flow that measures it.
+- `kinenix-worker/README.md`: the systemd unit to write for a worker installed with pip, until #153.
+- `docs/roadmap.md`: the releases after 1.0.0 as their milestones are now; the agent interface moved from 1.1.0 to 1.5.0.
+
 ## 1.0.0rc4 (2026-11-09)
 
 The last fix planned for 1.0.0. Upgrading from 1.0.0rc3: read the note marked Upgrading below. Upgrading from 1.0.0rc2 or older: read the notes of 1.0.0rc3 too.
