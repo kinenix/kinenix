@@ -189,7 +189,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Command: run
-    run_parser = subparsers.add_parser("run", help="Run an RPA Flow by name or path (e.g. 'kinenix run rpachallenge')")
+    run_parser = subparsers.add_parser("run", help="Run an RPA Flow by name or path (e.g. 'kinenix run hello')")
     run_parser.add_argument("flow_file", help="Flow name, bundle folder, or path to a flow.md file")
     run_parser.add_argument("--vars", help="Optional JSON string of variables to override", default=None)
     run_parser.add_argument("--config", dest="config_file", default=None,

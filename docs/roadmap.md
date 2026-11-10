@@ -19,9 +19,12 @@ Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
 | 0.3.0b1: Expressions | Count, join, clean, and calculate values in `${...}`, safely | 2026-10-20 | Released |
 | 0.4.0b1: Web actions | Modern web pages without multi-step workarounds | 2026-10-23 | Released |
 | 0.5.0b1: Proven on business flows | A tutorial and a business example, run by CI with a real browser, and testing flows against saved pages | 2026-10-28 | Released |
-| 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-06 | Planned |
-| 1.1.0: Agent interface | AI agents, small local ones first, can use Kinenix: ask about runs, start runs, and read the results | After 1.0.0 | Planned |
+| 1.0.0: Stable core | A core that can be trusted, with a written stability promise | After the 1.0.0rc4 soak | Release candidate |
+| 1.1.0: Flow data tools | Fix what real flows written by AI assistants ran into: sorting, filtering, and totals on lists, shorter conditions, loops that stop early, clearer errors | After 1.0.0 | Planned |
 | 1.2.0: Developer tools | See and check flows in the editor | After 1.1.0 | Planned |
+| 1.3.0: Hardening and docs | Close the open findings of the threat model, a security guide, and the website organized by purpose | After 1.2.0 | Planned |
+| 1.4.0: Daily results you can trust | Kinenix knows whether each day's work really succeeded: expected outputs, missed runs, schedules managed by command | After 1.3.0 | Planned |
+| 1.5.0: Works with AI agents | AI agents use Kinenix like an employee: build a flow for a person to review, run the day's flows, and report what failed or did not run | After 1.4.0 | Planned |
 
 ### 0.2.0b3: Silent bugs and docs
 
@@ -153,7 +156,7 @@ Release:
 
 **Compatibility:** no breaking change from 0.5.0b1. Deprecated names keep working, with a warning, until 2.0.
 
-**Out of scope (after 1.0.0):** the agent interface, MCP server, and job dispatch (1.1.0); developer tools (1.2.0); a Hub service installer and a Docker image; `kinenix connect --name` and finding the Hub on the LAN automatically; `kinenix record`; PostgreSQL; Studio (paused).
+**Out of scope (after 1.0.0):** the agent interface, MCP server, and job dispatch (1.5.0); developer tools (1.2.0); a Hub service installer and a Docker image; `kinenix connect --name` and finding the Hub on the LAN automatically; `kinenix record`; PostgreSQL; Studio (paused).
 
 ### Later: measured limits
 
@@ -164,7 +167,23 @@ Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0
 - Hub load: many workers sending runs at once, a large `hub.db`, and the time `query` and `report` take
 - macOS in CI
 
-### 1.1.0: Agent interface
+### 1.1.0: Flow data tools
+
+**Goal:** fix what real flows written by AI assistants ran into after the release candidates: sorting, filtering, and totals on lists (#142, #143); shorter conditions (#144); loops that stop early and paging with per-page error tolerance (#191, #192); text-to-value lookups (#194); a custom error message on any step (#193) and `on_error: ignore` for steps whose failure does not matter (#197); clearer business errors on web lists (#146); template guidance (#150) and a validate hint for loops (#151); `kinenix-worker service install` after `pip install` (#153); worker logs of its triggers (#156); and `> Requires:` detection for features newer than 0.4.0b1 (#198).
+
+**Compatibility:** additions only; nothing promised in 1.0.0 changes.
+
+### 1.3.0: Hardening and docs
+
+**Goal:** close the open findings of the threat model ([design/threat-model.md](design/threat-model.md)), add a security guide for security teams, and organize the website as tutorial, how-to, reference, and explanation (#118).
+
+### 1.4.0: Daily results you can trust
+
+**Goal:** Kinenix itself knows whether each day's work really succeeded: expected outputs per flow, so missing, empty, or old files fail the run (#152); missed runs shown on the Hub (#154); and triggers managed by command instead of editing `triggers.json` (#155).
+
+### 1.5.0: Works with AI agents
+
+Until 2026-11-03 this section was 1.1.0, "Agent interface". The goal grew: an agent works like an employee who builds a flow from a requirements file for a person to review, runs the flows a person schedules, and says when a flow failed, did not run, or did not produce its file. The checklist is #97; #125 is the benchmark.
 
 **Goal:** an AI agent, a small model running locally first, can use Kinenix the way a careful person does: find out what it can do, ask about runs ("did hello fail at 11 pm?"), start a run on a worker ("run hello on the Raspberry Pi") after a person confirms, and read and explain the result. Kinenix keeps working without any agent. Design: [design/agent-interface.md](design/agent-interface.md).
 
@@ -190,7 +209,7 @@ Field test:
 
 Docs and release:
 - [ ] An agent guide shipped in the package (`kinenix agent-guide`), usable as an OpenClaw or Claude skill
-- [ ] CHANGELOG entry; TestPyPI checked; tag `v1.1.0`; PyPI checked
+- [ ] CHANGELOG entry; TestPyPI checked; tag `v1.5.0`; PyPI checked
 
 **Compatibility:** additions only; nothing promised in 1.0.0 changes.
 

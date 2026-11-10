@@ -19,6 +19,6 @@ This document defines testing conventions, validation benchmarks, and regression
 
 ## 2. Benchmark & End-to-End Verification
 
-- **Benchmark Suites:** Use real-world validation scenarios (e.g., `flows/benchmarks/rpachallenge/`) to verify end-to-end flow integrity.
+- **Benchmark Suites:** Use real-world validation scenarios (the examples in `flows/examples/`, and those that need a real website in [kinenix/examples](https://github.com/kinenix/examples)) to verify end-to-end flow integrity.
 - **Regression Prevention:** Whenever updating the core engine or interpreter, execute benchmark verification to ensure backward compatibility for existing flow schemas.
 - **Deterministic Assertions:** End-to-end tests must verify final outputs, step count metrics, and generated log structures.

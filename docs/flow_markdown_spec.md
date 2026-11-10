@@ -102,7 +102,7 @@ All parameters passed to the action must be written as Markdown bullet items dir
 - **List or object (JSON):** `- **columns:** ["Date", "Rate"]` or `- **item:** {"net": "${number(inv.amount)}"}`. Put quotes around `${...}` inside JSON; a value written as `{...}` or `[...]` that is not valid JSON is read as text, and `kinenix validate` reports it
 - **Dynamic Variable Expression:** `- **url:** ${config.website}`
 - **Output Variable:** `- **output_var:** my_result` (stores action result in context). An action that returns nothing and a step that fails leave it empty, so a loop never reuses the previous item's value; a step skipped by its `condition` leaves it as it was
-- **Error Handling:** `- **on_error:** continue`, `- **max_retries:** 2`, `- **retry_interval:** 3.0`, `- **fallback_step_id:** step_9` (deprecated). These four keys are compiled into the step's `error_handler`, not into the action parameters (see [Step Resilience & Error Handling](actions_reference.md#step-resilience--error-handling-error_handler)).
+- **Error Handling:** `- **on_error:** continue`, `- **max_retries:** 2`, `- **retry_interval:** 3.0`, `- **fallback_step_id:** step_9` (deprecated). These four keys are compiled into the step's `error_handler`, not into the action parameters (see [Step Resilience & Error Handling](actions_reference.md#step-resilience-and-error-handling)).
 
 #### Example
 ```markdown
@@ -437,7 +437,7 @@ Loops with `item_label` are the flow's work items: the run log counts them as do
 
 ## 4. Complete Reference Example
 
-Below is the complete `flow.md` specification for the **RPA Challenge Solver** benchmark:
+Below is a complete `flow.md`: an earlier version of the **RPA Challenge Solver**, whose current version is in [kinenix/examples](https://github.com/kinenix/examples/tree/main/rpa-challenge):
 
 ```markdown
 # RPA Challenge Solver
@@ -493,14 +493,14 @@ Below is the complete `flow.md` specification for the **RPA Challenge Solver** b
 
 1. **Validation of actions and parameters:**
    ```bash
-   kinenix validate flows/examples/rpachallenge          # exit code 4 when problems are found
+   kinenix validate flows/examples/quote_requests         # exit code 4 when problems are found
    ```
    Each action declares the parameters it reads. `kinenix validate`, `kinenix run`, and `kinenix-worker run` report unknown actions, parameters that no action reads (which would otherwise be ignored silently), lines the parser ignores, step headings without an action, and a flow without steps, and suggest the closest name (for example `timout` -> `timeout`). They also follow `flow.call` targets into subflows. `run` only warns, except that a flow without steps does not run. The `kinenix-core` test suite validates every flow under `flows/` and every example in `docs/`.
 2. **Compiled form (for inspection):**
    ```bash
-   kinenix compile flows/examples/rpachallenge                     # print the compiled flow as JSON
-   kinenix compile flows/examples/rpachallenge -o /tmp/flow.json   # or write it to a file
-   kinenix compile flows/examples/rpachallenge --strict            # also exit 1 when validation finds problems
+   kinenix compile flows/examples/quote_requests                   # print the compiled flow as JSON
+   kinenix compile flows/examples/quote_requests -o /tmp/flow.json   # or write it to a file
+   kinenix compile flows/examples/quote_requests --strict            # also exit 1 when validation finds problems
    ```
    The result is validated against `kinenix.models.flow.FlowDefinition`; parsing errors name the line.
 3. **Converting an old JSON flow (once):**

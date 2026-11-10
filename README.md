@@ -138,11 +138,11 @@ kinenix-worker info
 # List available flows (clean, deduplicated view)
 kinenix list
 
-# Run the RPA Challenge benchmark (auto-compiles flow.md if needed)
-kinenix run rpachallenge
+# Run an example (copy it first with: kinenix init demo --example quote_requests)
+kinenix run demo
 
 # Run with unattended worker daemon
-kinenix-worker run flows/examples/rpachallenge/
+kinenix-worker run demo
 ```
 
 ---

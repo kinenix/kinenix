@@ -977,7 +977,7 @@ Creates a folder, including any missing parent folders. An existing folder is no
 
 Core orchestration primitives for variable manipulation, loops, conditions, and error recovery.
 
-### Step Resilience & Error Handling (`error_handler`)
+### Step Resilience and Error Handling
 
 Every step in Kinenix can define an optional `error_handler` strategy to make execution resilient against transient network hiccups or flaky selectors:
 

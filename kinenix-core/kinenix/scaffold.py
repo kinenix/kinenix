@@ -11,6 +11,7 @@ import unicodedata
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 
+from . import __version__
 from .engine.markdown import markdown_to_flow
 from .models.flow import Step
 
@@ -55,7 +56,8 @@ def create_new_project(title: str, target: Optional[Path] = None) -> Path:
         dest = target / rel.parent / DOTFILE_NAMES.get(rel.name, rel.name)
         dest.parent.mkdir(parents=True, exist_ok=True)
         if source.suffix in TEXT_SUFFIXES or rel.name in DOTFILE_NAMES:
-            dest.write_text(source.read_text(encoding="utf-8").replace("{{title}}", title), encoding="utf-8")
+            text = source.read_text(encoding="utf-8").replace("{{title}}", title).replace("{{version}}", __version__)
+            dest.write_text(text, encoding="utf-8")
         else:
             dest.write_bytes(source.read_bytes())
     return target

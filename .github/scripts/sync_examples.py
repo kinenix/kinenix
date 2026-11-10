@@ -15,7 +15,7 @@ from typing import Dict, List
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SOURCE = REPO_ROOT / "flows" / "examples"
 TARGET = REPO_ROOT / "kinenix-core" / "kinenix" / "examples"
-EXAMPLES = ("hello", "bot_fx_rate", "rpachallenge", "first_flow", "quote_requests")
+EXAMPLES = ("hello", "bot_fx_rate", "first_flow", "quote_requests")
 ASSET_SUFFIXES = (".xlsx", ".xls", ".csv", ".txt", ".pdf")
 
 

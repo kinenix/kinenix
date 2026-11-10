@@ -44,18 +44,18 @@ def test_list_flows():
     flows = response.json()
     assert isinstance(flows, list)
     flow_names = [f["name"] for f in flows]
-    assert "RPA Challenge Solver" in flow_names
+    assert "Motor Insurance Quote Requests" in flow_names
 
 
-def test_get_rpachallenge_flow():
-    response = client.get("/api/flow", params={"path": "flows/examples/rpachallenge"})
+def test_get_quote_requests_flow():
+    response = client.get("/api/flow", params={"path": "flows/examples/quote_requests"})
     assert response.status_code == 200
     data = response.json()
     assert data["is_valid"] is True
-    assert data["flow"]["name"] == "RPA Challenge Solver"
+    assert data["flow"]["name"] == "Motor Insurance Quote Requests"
     assert len(data["flow"]["steps"]) >= 4
     # Verify associated config was loaded
-    assert "website" in data["config"]
+    assert data["config"]
 
 
 def test_update_flow_validation_failure():

@@ -105,7 +105,7 @@ AI runs as a **decoupled sidecar**. `kinenix-core` stays lightweight and can run
 | Flow actions | `ai.prompt` (JSON-constrained prompts), `ai.extract` (structured fields from text or images), `ai.decide` | Ollama and OpenThai-SystemOne over HTTP (`kinenix-core/kinenix/actions/ai_*.py`) |
 | Hub | Classifies failures and suggests fixes from execution telemetry | `kinenix-hub/kinenix_hub/services/ai_summarizer.py`, with a rule-based fallback when the LLM is unreachable |
 
-See [actions_reference.md](actions_reference.md) for action parameters and [flows/examples/rpachallenge_ocr/](../flows/examples/rpachallenge_ocr/) for an end-to-end example.
+See [actions_reference.md](actions_reference.md) for action parameters and [rpa-challenge-ocr in kinenix/examples](https://github.com/kinenix/examples/tree/main/rpa-challenge-ocr) for an end-to-end example.
 
 Planned: self-healing selectors, a Studio copilot for natural-language flow authoring, and SLM diagnosis sent to LINE notifications.
 
