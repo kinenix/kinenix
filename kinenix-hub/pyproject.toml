@@ -12,7 +12,7 @@ license-files = ["LICENSE", "NOTICE"]
 authors = [{ name = "arttopix" }]
 keywords = ["rpa", "automation", "dashboard", "telemetry", "local-ai"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
     "Operating System :: OS Independent",
@@ -25,7 +25,7 @@ classifiers = [
 requires-python = ">=3.12"
 dependencies = [
     # The `kinenix hub` command lives in kinenix-core
-    "kinenix>=1.0.0rc4",
+    "kinenix>=1.0.0",
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.28.0",
     "sqlalchemy>=2.0.0",

@@ -19,7 +19,7 @@ Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
 | 0.3.0b1: Expressions | Count, join, clean, and calculate values in `${...}`, safely | 2026-10-20 | Released |
 | 0.4.0b1: Web actions | Modern web pages without multi-step workarounds | 2026-10-23 | Released |
 | 0.5.0b1: Proven on business flows | A tutorial and a business example, run by CI with a real browser, and testing flows against saved pages | 2026-10-28 | Released |
-| 1.0.0: Stable core | A core that can be trusted, with a written stability promise | After the 1.0.0rc4 soak | Release candidate |
+| 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-10 | Released |
 | 1.1.0: Flow data tools | Fix what real flows written by AI assistants ran into: sorting, filtering, and totals on lists, shorter conditions, loops that stop early, clearer errors | After 1.0.0 | Planned |
 | 1.2.0: Developer tools | See and check flows in the editor | After 1.1.0 | Planned |
 | 1.3.0: Hardening and docs | Close the open findings of the threat model, a security guide, and the website organized by purpose | After 1.2.0 | Planned |
@@ -141,17 +141,18 @@ Before the release candidate:
 - [x] `docs/releasing.md` installs from TestPyPI without its broken copies of other packages
 - [x] Release `1.0.0rc2` (2026-11-02). `1.0.0rc1` went only to TestPyPI: testing it on a clean Ubuntu user and with a flow built by an AI assistant found #145 and logs written to the current folder, fixed in rc2
 - [x] Release `1.0.0rc3` (2026-11-06) with the fixes from the review of rc2 (#159 to #174), which settle behavior that is frozen for 1.x. Soak on the Raspberry Pi, 2026-11-06 to 2026-11-08: every run on time and recorded, no crash, worker memory steady at about 109 MB
-- [ ] Release `1.0.0rc4` (2026-11-09) with #166: a stopped run finishes its step and runs Finally
+- [x] Release `1.0.0rc4` (2026-11-09) with #166: a stopped run finishes its step and runs Finally
 
-Check of 1.0.0rc4 (from 2026-11-09):
-- [ ] Soak: the Raspberry Pi worker runs the offline examples (`hello`, `quote_requests`, the tutorial solution) every 30 minutes for 48 hours and reports to the Ubuntu Hub: no failure caused by Kinenix, memory does not grow, no browser process is left behind; a baseline (time and memory of a 100-item loop on the Raspberry Pi) is written in `docs/examples.md`
-- [ ] `bot_fx_rate` runs on its cron schedule on the worker
-- [ ] Ubuntu Hub: every run and failure is recorded, and `report`, `logs`, and `query` answer correctly
+Check of 1.0.0rc4 (2026-11-09 to 2026-11-10):
+- [x] Soak: the Raspberry Pi worker runs the offline examples (`hello`, `quote_requests`, the tutorial solution) every 30 minutes and reports to a Hub on the same Pi, 48 hours for 1.0.0rc3 and 24 hours for 1.0.0rc4: no failure caused by Kinenix, memory does not grow (worker at about 108 MB), no browser process is left behind; a baseline (time and memory of a 100-item loop on the Raspberry Pi) is written in `docs/examples.md`. In the rc4 soak, 148 runs, every one recorded on the Hub; a restart of the worker during a run ended it as `interrupted` with Finally run. The Hub answered HTTP 500 twice when two writes met, without losing a run (#201, after 1.0.0)
+- [x] `bot_fx_rate` runs on its cron schedule on the worker
+- [ ] Hub: every run and failure is recorded, and `report`, `logs`, and `query` answer correctly
+- [x] A new Linux user on the Raspberry Pi: `.github/scripts/fresh_user_test.sh 1.0.0rc4` passed all 15 checks
 - [x] Windows: a Hub database from 0.2.0b3 upgrades through Hub 1.0.0rc2 with no data lost
-- [ ] Only bug fixes after the release candidate
+- [x] Only bug fixes after the release candidate
 
 Release:
-- [ ] Version `1.0.0`, package classifier `Development Status :: 5 - Production/Stable`, CHANGELOG with upgrade notes from 0.2.0b4
+- [x] Version `1.0.0`, package classifier `Development Status :: 5 - Production/Stable`, CHANGELOG with upgrade notes from 0.2.0b4
 - [ ] TestPyPI checked; tag `v1.0.0`; PyPI checked
 
 **Compatibility:** no breaking change from 0.5.0b1. Deprecated names keep working, with a warning, until 2.0.

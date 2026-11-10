@@ -2,7 +2,7 @@
 
 Core execution engine and `kinenix` CLI for **Kinenix**, an open-source, local AI-native RPA framework in Python.
 
-> **Status: release candidate for 1.0.0.** From 1.0.0, flows, commands, exit codes, and logs stay compatible for all of 1.x ([compatibility](https://github.com/kinenix/kinenix/blob/main/docs/compatibility.md)).
+> **Status: stable (1.x).** Flows, commands, exit codes, and logs stay compatible for all of 1.x ([compatibility](https://github.com/kinenix/kinenix/blob/main/docs/compatibility.md)).
 
 - Runs automation flows written as `flow.md`
 - Built-in actions for web automation (Playwright), Excel and CSV (no Microsoft Office required), files, HTTP, email, and flow control

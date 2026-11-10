@@ -122,7 +122,7 @@ check "Run hello" 0 "kinenix run demo"
 check "Copy the quote_requests example" 0 "kinenix init quotes --example quote_requests"
 check "Run quote_requests: 2 of 5 requests fail by design" 8 "kinenix run quotes"
 check "Stop a run with SIGTERM" 130 "timeout --preserve-status -s TERM 8 kinenix run quotes"
-check "The stopped run's log ends with _interrupted.json" 0 "find ~/kinenix-flows/logs -name '*_interrupted.json' | grep -q ."
+check "The stopped run's log ends with _interrupted.json" 0 "find ~/kinenix-flows/quotes/logs -name '*_interrupted.json' | grep -q ."
 check "A new project validates" 0 "kinenix init 'Fresh check' && kinenix validate fresh_check"
 
 PORT="$(free_port)"
