@@ -85,14 +85,15 @@ Kinenix Worker System Information:
   hub_api_key: (not set)
 ```
 
-### C. Run RPA Challenge Example Flow
+### C. Run an Example Flow
 ```bash
-kinenix-worker run flows/examples/rpachallenge
+kinenix init demo --example quote_requests
+kinenix-worker run demo
 ```
 
 To run from a separate copy of the bundle (the original folder stays unchanged):
 ```bash
-kinenix-worker run flows/examples/rpachallenge --sandbox
+kinenix-worker run demo --sandbox
 ```
 
 ### D. Connect to the Hub
@@ -120,7 +121,7 @@ export KINENIX_HUB_API_KEY="<key>"
 export KINENIX_WORKER_ID=rpi4-01
 
 kinenix-worker ping          # checks reachability and the API key; exit code 1 on failure
-kinenix-worker run flows/examples/rpachallenge
+kinenix-worker run demo
 ```
 
 With the URL set:
@@ -132,13 +133,34 @@ With the URL set:
 
 ### E. Run as a systemd Service
 
-The service keeps `kinenix-worker daemon` running in the background, starts it at boot, and restarts it within 10 seconds if it stops. It runs as the user who installed it, from the repository directory, so relative flow paths such as `flows/examples/rpachallenge` work. While it runs, the worker sends heartbeats and shows as online in the Hub.
+The service keeps `kinenix-worker daemon` running in the background, starts it at boot, and restarts it within 10 seconds if it stops. It runs as the user who installed it, from the repository directory, so relative flow paths such as `flows/examples/quote_requests` work. While it runs, the worker sends heartbeats and shows as online in the Hub.
 
 `setup_rpi.sh` installs it. To install or update it on an existing setup, run as your normal user (not root):
 
 ```bash
 ./kinenix-worker/scripts/install_service.sh
 ```
+
+**Installed with pip?** `install_service.sh` is in this repository, not in the package, and expects a clone with `.venv`. Until `kinenix-worker service install` exists (#153), write the unit yourself, with your user name and the path of your virtual environment, as `/etc/systemd/system/kinenix-worker.service`:
+
+```ini
+[Unit]
+Description=Kinenix Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=YOU
+WorkingDirectory=/home/YOU/kinenix-flows
+ExecStart=/bin/bash -c 'if [ -f /home/YOU/.kinenix/worker.env ]; then . /home/YOU/.kinenix/worker.env; fi; exec /home/YOU/kx/bin/kinenix-worker daemon --config /home/YOU/.kinenix/triggers.json'
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then `sudo systemctl daemon-reload && sudo systemctl enable --now kinenix-worker`. `systemctl stop` lets a running flow finish its step and run `## Finally` (up to 60 seconds) before the worker exits.
 
 It reads two files in `~/.kinenix/`, creating them if they do not exist (existing files are never overwritten):
 

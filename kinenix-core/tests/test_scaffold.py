@@ -10,7 +10,7 @@ import pytest
 from kinenix import scaffold
 from kinenix.engine.interpreter import FlowInterpreter
 from kinenix.engine.logger import ExecutionLogger
-from kinenix.engine.markdown import load_flow
+from kinenix.engine.markdown import load_flow, markdown_to_flow
 from kinenix.engine.validation import validate_flow
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -20,10 +20,11 @@ def test_examples_are_listed_with_the_default_first():
     examples = scaffold.available_examples()
     names = [name for name, _, _ in examples]
     assert names[0] == scaffold.DEFAULT_EXAMPLE == "hello"
-    assert {"hello", "bot_fx_rate", "rpachallenge"} <= set(names)
+    assert {"hello", "bot_fx_rate", "quote_requests"} <= set(names)
+    assert "rpachallenge" not in names  # moved to kinenix/examples: it needs a third-party website
     needs_browser = {name: nb for name, _, nb in examples}
     assert needs_browser["hello"] is False
-    assert needs_browser["bot_fx_rate"] is True and needs_browser["rpachallenge"] is True
+    assert needs_browser["bot_fx_rate"] is True and needs_browser["quote_requests"] is True
     assert all(description for _, description, _ in examples)
 
 
@@ -81,8 +82,7 @@ def test_every_example_creates_a_valid_project(tmp_path, monkeypatch):
         project = scaffold.create_project(tmp_path / name, name)
         assert validate_flow(load_flow(project / "flow.md")) == [], name
         assert not (project / "flow.json").exists()
-    assert (tmp_path / "rpachallenge" / "assets" / "challenge.xlsx").is_file()
-    assert not list((tmp_path / "rpachallenge" / "assets").glob("*.png"))  # outputs are not shipped
+    assert not list(tmp_path.rglob("output/*.*"))  # outputs are not shipped
 
 
 def test_packaged_examples_match_flows_examples():
@@ -238,3 +238,13 @@ def test_every_example_has_requirements_with_the_template_sections():
         assert re.findall(r"^## (.+)$", text, re.M) == sections, bundle.name
         assert "<" not in re.sub(r"`[^`]*`", "", text), f"{bundle.name}: a template hint was left in"
         assert "requirements.md" in (bundle / "README.md").read_text(encoding="utf-8"), bundle.name
+
+
+def test_a_new_project_names_the_kinenix_it_was_made_with(tmp_path):
+    """Adding ## Finally, expressions, or next_item does not make kinenix validate ask for > Requires: (#196)."""
+    from kinenix import __version__
+    project = scaffold.create_new_project("Get stock data", tmp_path / "get_stock_data")
+    text = (project / "flow.md").read_text(encoding="utf-8")
+    assert f"> Requires: kinenix>={__version__}" in text and "{{version}}" not in text
+    with_finally = text + "\n## Finally\n\n### 2. Done (`logic.set_variable`)\n- **name:** `done`\n- **value:** ${len('ok')}\n"
+    assert validate_flow(markdown_to_flow(with_finally)) == []

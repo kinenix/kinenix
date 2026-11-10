@@ -48,8 +48,8 @@ cd kinenix-studio/frontend; npm ci; npm run build
 kinenix init "Get stock data"                     # new task project: requirements.md, AGENTS.md, flow.md skeleton
 kinenix init demo --example hello                 # copy of a flows/examples bundle shipped in the package
 kinenix actions [web]                             # actions and the parameters each accepts
-kinenix run flows/examples/rpachallenge
-kinenix validate flows/examples/rpachallenge   # unknown actions and ignored parameters
+kinenix run flows/examples/quote_requests
+kinenix validate flows/examples/quote_requests   # unknown actions and ignored parameters
 kinenix connect http://<hub-ip>:8080   # send this machine's runs to a Hub (asks for and checks the key)
 kinenix hub            # first run asks setup questions and saves them
 kinenix hub status     # workers and recent executions of a running server
@@ -66,9 +66,9 @@ The website www.kinenix.com is a separate repository (`kinenix/kinenix-web`, MkD
 
 A flow is one `flow.md` file; there is no `flow.json` (the runner and the worker read `flow.md` directly, `kinenix compile` prints the compiled form, and `kinenix export-md` converts old JSON flows). Do not create `flow.json` files.
 
-Users keep their own flows in a flows folder outside this repository (`workspace.py`, default `~/kinenix-flows`). `flows/` here holds only the examples shipped with Kinenix and shared subflows; do not add user or business flows to it.
+Users keep their own flows in a flows folder outside this repository (`workspace.py`, default `~/kinenix-flows`). `flows/` here holds only the examples shipped with Kinenix and shared subflows; do not add user or business flows to it. Examples that need a real website or other services live in [kinenix/examples](https://github.com/kinenix/examples).
 
-After editing `flows/examples/hello`, `bot_fx_rate`, `rpachallenge`, `first_flow` (the tutorial, `docs/tutorial.md`), or `quote_requests`, run `python .github/scripts/sync_examples.py`: the package ships copies of them for `kinenix init --example`, and a test fails when the copies differ. The new-project template (`requirements.md`, an `AGENTS.md` for the user's AI assistant, and the rest) lives in `kinenix-core/kinenix/templates/new_project/`.
+After editing `flows/examples/hello`, `bot_fx_rate`, `first_flow` (the tutorial, `docs/tutorial.md`), or `quote_requests`, run `python .github/scripts/sync_examples.py`: the package ships copies of them for `kinenix init --example`, and a test fails when the copies differ. The new-project template (`requirements.md`, an `AGENTS.md` for the user's AI assistant, and the rest) lives in `kinenix-core/kinenix/templates/new_project/`.
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are published to PyPI together with one version (`pip install "kinenix[hub]"`, `"kinenix[worker]"`); the version lives in each package's `__version__`. Releases are tag-driven through `.github/workflows/release.yml`; follow [docs/releasing.md](docs/releasing.md) and never reuse a released version number. `kinenix-studio` is not published.
 

@@ -2,6 +2,23 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+### Changed
+
+- **The RPA Challenge examples moved to [kinenix/examples](https://github.com/kinenix/examples):** `rpachallenge` and `rpachallenge_ocr` need a third-party website, so they cannot run offline in CI with Kinenix. `kinenix init --example rpachallenge` no longer exists; clone kinenix/examples instead. The Excel file of the challenge is no longer shipped: the flow downloads it from the website when it runs, and it now fills the form for all ten people.
+
+### Fixed
+
+- A project made with `kinenix init` had no `> Requires:` line, so `kinenix validate` reported a problem as soon as the flow used `## Finally`, expressions, or `on_error: next_item` (#196). The new `flow.md` names the Kinenix version that made it.
+- The link from `flow_markdown_spec.md` to the error handling section of `actions_reference.md` was broken on the website.
+
+### Documentation
+
+- `docs/examples.md`: how fast the engine is on a Raspberry Pi 4 and a laptop, with the flow that measures it.
+- `kinenix-worker/README.md`: the systemd unit to write for a worker installed with pip, until #153.
+- `docs/roadmap.md`: the releases after 1.0.0 as their milestones are now; the agent interface moved from 1.1.0 to 1.5.0.
+
 ## 1.0.0rc4 (2026-11-09)
 
 The last fix planned for 1.0.0. Upgrading from 1.0.0rc3: read the note marked Upgrading below. Upgrading from 1.0.0rc2 or older: read the notes of 1.0.0rc3 too.
