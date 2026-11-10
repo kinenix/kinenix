@@ -88,6 +88,7 @@ Read the matching file before working in that area:
 | Code style | `.agents/rules/coding_standards.md` |
 | Tests | `.agents/rules/testing_standards.md` |
 | Commits and branches | `.agents/rules/git_workflow.md` |
+| Reporting issues from test machines and AI assistants; triaging new issues (`/triage` in Claude Code) | `.agents/rules/triage.md` |
 | Module boundaries and design principles | `.agents/rules/architecture.md`, `docs/architecture.md` |
 | What is built vs. planned, next priorities | `docs/roadmap.md` |
 | Finding any other document | `docs/README.md` |

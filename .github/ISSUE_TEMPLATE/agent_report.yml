@@ -1,0 +1,65 @@
+name: Report from a test machine or AI assistant
+description: A problem found while running flows on a test machine or building a flow with an AI assistant
+title: "fix: "
+labels: ["needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report what Kinenix itself does wrong or cannot do. A wrong selector, a missing setting, or a site that changed is a problem of the flow; fix the flow instead. Rules: `.agents/rules/triage.md`.
+
+        Remove secrets and personal data from everything below. Never attach `.env` files or the Hub key.
+  - type: dropdown
+    id: found_by
+    attributes:
+      label: Found by
+      options:
+        - Worker check on the Raspberry Pi
+        - AI assistant building a flow
+        - A person
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `kinenix --version`
+      placeholder: kinenix 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: machine
+    attributes:
+      label: Machine
+      placeholder: Raspberry Pi 4, Python 3.13
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What was expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The smallest flow.md that shows the problem, and the command that runs it
+      render: markdown
+  - type: textarea
+    id: log
+    attributes:
+      label: Run id and log
+      description: The run id (`Run <id>`, the first line of `kinenix run`) and the log lines around the problem
+      render: text
+  - type: textarea
+    id: why_kinenix
+    attributes:
+      label: Why this is a Kinenix problem
+      description: Why the flow cannot fix it by itself
+    validations:
+      required: true

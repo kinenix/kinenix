@@ -70,6 +70,10 @@ Released version numbers can never be reused on PyPI or TestPyPI. If something i
    kinenix version
    kinenix-worker --version
    ```
+   Then install it as a brand-new Linux user, as in section 2.1:
+   ```bash
+   sudo .github/scripts/fresh_user_test.sh 1.0.0rc4 --index testpypi
+   ```
 4. **Publish to PyPI** by tagging `main`:
    ```bash
    git switch main && git pull
@@ -80,6 +84,50 @@ Released version numbers can never be reused on PyPI or TestPyPI. If something i
 5. Check https://pypi.org/project/kinenix/, `kinenix-hub`, and `kinenix-worker`, then install from PyPI in a clean environment.
 
 ---
+
+### 2.1 A new user on a clean machine
+
+Every release is installed once as a brand-new Linux user, so nothing from an earlier installation (settings in `~/.kinenix`, flows, a virtual environment, a cached package) hides a problem. `.github/scripts/fresh_user_test.sh` does it in one command:
+
+```bash
+sudo .github/scripts/fresh_user_test.sh 1.0.0rc4 --index testpypi   # before tagging
+sudo .github/scripts/fresh_user_test.sh 1.0.0rc4                    # after PyPI has it
+```
+
+It creates a temporary user, installs the three packages in a new virtual environment, and checks the versions, Chromium, the `hello` example (exit code 0), `quote_requests` (8, two requests fail by design), a run stopped with SIGTERM (130 and an `_interrupted.json` log), a new project from `kinenix init`, and a Hub on a free port with its migrations. It writes a Markdown report to `/var/tmp`, prints its path, and deletes the user; `--keep` keeps the user for a look. Exit code 0 means every check passed.
+
+It does not touch the worker or the Hub of another user, so it can run on a machine that is in a soak.
+
+#### An AI assistant on the test machine
+
+An AI assistant, such as Claude Code, can run the script and then build a flow from a `requirements.md` the way a new user would. Set it up once:
+
+1. **A separate account for the assistant**, for example `kxagent`, with its editor, extensions, and login installed once. The assistant stays in this account; only Kinenix starts fresh for each version.
+2. **The script, and nothing else, with sudo:** copy it to `/opt/kinenix-test/fresh_user_test.sh`, owned by root and not writable by others, and allow only that path in `/etc/sudoers.d/kinenix-test` (edit with `sudo visudo -f /etc/sudoers.d/kinenix-test`):
+   ```
+   kxagent ALL=(root) NOPASSWD: /opt/kinenix-test/fresh_user_test.sh
+   ```
+3. **A GitHub token that can only open issues:** a fine-grained token for `kinenix/kinenix` with Issues: Read and write and nothing else, given to `gh auth login` in the assistant's account.
+4. **Instructions** in the `AGENTS.md` of the assistant's working folder:
+   ```markdown
+   ## Testing a new Kinenix version
+
+   When asked to test a version, for example "test kinenix 1.0.0":
+   1. Run `sudo /opt/kinenix-test/fresh_user_test.sh <version>` and read the report it names.
+   2. Build a flow in a fresh environment, without touching your own home folder's settings:
+      T=~/kinenix-tests/<version>
+      python3 -m venv $T/venv && . $T/venv/bin/activate && pip install "kinenix[worker]==<version>"
+      export KINENIX_SETTINGS_FILE=$T/kinenix.env KINENIX_FLOWS_DIR=$T/flows
+      Then `kinenix init "<task>"`, write the flow from requirements.md, and run it.
+   3. Report as `.agents/rules/triage.md` in kinenix/kinenix says (section 2), with the labels
+      needs-triage and found-by:flow-builder: a new issue for each problem of Kinenix itself, and a
+      comment with the report on the release checklist issue when everything passed.
+
+   Before starting, answer questions in your open issues:
+   gh issue list --repo kinenix/kinenix --author @me --state open
+   ```
+
+The assistant does not notice a new version by itself: tell it, for example "test kinenix 1.0.0". It never merges, tags, or publishes; those stay with a person.
 
 ## 3. Upgrading an installation
 
