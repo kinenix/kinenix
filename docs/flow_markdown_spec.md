@@ -269,9 +269,43 @@ Inside `${...}`, a value can also be calculated: counted, joined, cleaned, picke
 - **Arithmetic needs numbers.** Text that is a plain number (`"12"`, `"3.5"`, as read from CSV) counts as a number; other text is an error that suggests `number(...)`. A whole result is written without `.0`.
 - **Missing values are empty**, as for variables: a missing key or an index past the end gives empty, and the functions treat empty as listed above.
 - **A variable that exists is always read as before.** `${row.First Name}` and `${row.Role in Company}` are keys of `row`, not expressions. Text is evaluated as an expression only when it names no existing variable.
-- **Comparisons and `and` / `or` / `not` belong in conditions**, not inside `${...}`: write `${count} > 3`, not `${count > 3}`.
+- **Comparisons and `and` / `or` / `not`** work inside `${...}` from Kinenix 1.1.0, with the rules of conditions; see [Lists, comparisons, and true/false values](#lists-comparisons-and-truefalse-values-kinenix-110-and-newer). On older versions write them in a condition: `${count} > 3`.
 - **Not allowed:** method calls (`x.upper()`; use `upper(x)`), names starting with `_`, `**`, slices (`[1:3]`; use `substring`), lambdas, comprehensions, and any function not in the table. Expressions are limited to 500 characters.
 - **Errors stop the step** with the expression and the reason, for example `${lenn(rows)}: unknown function 'lenn'`. `kinenix validate` reports them before a run, with the line.
+
+#### Lists, comparisons, and true/false values (Kinenix 1.1.0 and newer)
+
+After `web.get_list`, `web.get_table`, `excel.read`, or `csv.read`, sort, filter, count, and add up rows in one value instead of a loop, and set true/false or either-or values without `logic.if`. Add `> Requires: kinenix>=1.1.0` to a flow that uses them; `kinenix validate` says when. Design: [design/list-functions.md](design/list-functions.md).
+
+```markdown
+- **value:** ${sort_by(books, 'category', '-price')}
+- **value:** ${len(where(books, 'price', '<', config.cheap_limit))} cheap books, ${sum(books, 'price')} THB in total
+- **value:** {"title": "${book.title}", "cheap": "${price < config.cheap_limit}", "in_stock": "${contains(book.availability, 'In stock')}"}
+```
+
+| Function | Result | Example |
+| :--- | :--- | :--- |
+| `sort_by(list, key, ...)` | A new list sorted by one or more keys, low to high; `-key` sorts that key high to low. Numbers (also text such as `"1,200"` or `"£12.00"`) sort as numbers, text without case; empty values always come last; equal rows keep their order | `${sort_by(rows, 'category', '-price')}` |
+| `where(list, key, operator, value)` | A new list of the rows whose `key` compares to `value`. Operators: `==` `!=` `<` `<=` `>` `>=` `contains` `not contains` `in` `not in` `starts with` `ends with` `is empty` `is not empty` (the last two take no value). With `<` `<=` `>` `>=`, a row whose value is empty is left out. For two conditions that must both hold, put one `where` inside another | `${where(rows, 'status', '==', 'Paid')}` |
+| `column(list, key)` | The values of one key, in order | `${join(column(rows, 'id'), ', ')}` |
+| `sum(list)`, `sum(list, key)` | The total; empty values do not count, other text that is not a number stops the step | `${sum(rows, 'amount')}` |
+| `min`, `max`, `average` | Smallest, largest, mean; same arguments as `sum`; empty for an empty list | `${max(rows, 'price')}` |
+| `unique(list)`, `unique(list, key)` | Each value once, in the order first seen; with a key, the first row for each value | `${column(unique(rows, 'category'), 'category')}` |
+| `first(list)`, `last(list)` | The first or last item; empty for an empty list | `${first(rows).id}` |
+| `contains(x, part)` | `true` when the text holds `part` (without case) or the list holds the value | `${contains(row.note, 'urgent')}` |
+| `text(x)` | The value as text, so `==` and `!=` compare it as text: `text(a.code) == text(b.code)` keeps `0012` apart from `12` | `${text(row.branch) == text(other.branch)}` |
+| `ifelse(test, a, b)` | `a` when `test` is true, else `b`; only the chosen one is evaluated | `${ifelse(row.qty > 0, 'In stock', 'Sold out')}` |
+
+| Form | Example | Result |
+| :--- | :--- | :--- |
+| Comparison: `==` `!=` `<` `<=` `>` `>=` | `${price < config.cheap_limit}`, `${1 < x <= 10}` | `true` or `false` |
+| `and`, `or`, `not`, with parentheses | `${(in_stock or preorder) and price < 20}` | `true` or `false` |
+
+- **The rules of conditions.** Two values that look like numbers compare as numbers (`100 == 100.00`, `"1,200" == 1200`); anything else compares as text, without case. Text in quotes, or passed through `text(...)`, compares as text: `${branch == '0012'}` does not match `12`. `<` `<=` `>` `>=` need numbers on both sides; an empty or non-number side stops the step (exit code 4) and says which value.
+- **A misspelled key is an error**, not an empty list: `where: no row has the key 'prcie'; keys: category, price, title`.
+- **Functions never change the list they get**; they return a new one. Lists of up to 100,000 items.
+- **`in` is not a comparison inside `${...}`**, so `${row.Role in Company}` stays a key as before; use `contains(list, value)` or `where(..., 'in', list)`.
+- A missing key with `and`, `or`, or `not` in its name, such as `${row.Terms and Conditions}`, is still empty, as before.
 
 ---
 

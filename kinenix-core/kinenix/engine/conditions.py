@@ -91,6 +91,51 @@ def values_equal(left: Any, right: Any) -> bool:
     return s_left.lower() == s_right.lower()
 
 
+def is_true(value: Any) -> bool:
+    """A single value used as a condition: true, or the text true, 1, or yes."""
+    return value if isinstance(value, bool) else str(value).strip().lower() in ("true", "1", "yes")
+
+
+def compare(left: Any, operator: str, right: Any) -> bool:
+    """One comparison by operator name or symbol, with the rules of conditions; also used by where(...) in ${...}."""
+    op = (operator or "equals").lower().strip().replace(" ", "_")
+
+    if op in ["is_empty", "empty"]:
+        return left is None or str(left).strip() == ""
+    if op in ["is_not_empty", "not_empty"]:
+        return left is not None and str(left).strip() != ""
+
+    if is_order_operator(op):
+        return compare_order(left, op, right)
+
+    s_left = "" if left is None else str(left).strip()
+    s_right = "" if right is None else str(right).strip()
+
+    if op in ["equals", "==", "eq"]:
+        return values_equal(left, right)
+    if op in ["not_equals", "!=", "neq"]:
+        return not values_equal(left, right)
+    # `left in right` means left is part of right; a list on the other side is checked item by item
+    if op in ["in", "not_in"]:
+        if isinstance(right, (list, tuple, set)):
+            found = any(s_left.lower() == ("" if item is None else str(item).strip()).lower() for item in right)
+        else:
+            found = s_left.lower() in s_right.lower()
+        return found if op == "in" else not found
+    if op in ["contains", "not_contains"]:
+        if isinstance(left, (list, tuple, set)):
+            found = any(s_right.lower() == ("" if item is None else str(item).strip()).lower() for item in left)
+        else:
+            found = s_right.lower() in s_left.lower()
+        return found if op == "contains" else not found
+    if op in ["starts_with", "startswith"]:
+        return s_left.lower().startswith(s_right.lower())
+    if op in ["ends_with", "endswith"]:
+        return s_left.lower().endswith(s_right.lower())
+
+    return s_left == s_right
+
+
 def grouping_problem(expression: Any) -> Optional[str]:
     """What is wrong with a condition that groups with parentheses, which conditions do not support."""
     if not isinstance(expression, str):

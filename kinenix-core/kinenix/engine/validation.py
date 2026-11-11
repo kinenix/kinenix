@@ -3,6 +3,7 @@
 A misspelled parameter (for example `timout`) is otherwise ignored silently and the action falls back to
 its default, which is hard to notice. These checks only report; callers decide whether to warn or stop.
 """
+import ast
 import difflib
 from pathlib import Path
 from typing import Any, Iterable, List, Optional, Set
@@ -81,7 +82,13 @@ NEWER_FEATURES = {
     "expressions in ${...}": ("0.3.0b1", "0.2.0b4", "turns expressions such as ${len(rows)} into empty text"),
     "and / or / not in conditions": ("0.3.0b1", "0.2.0b4", "reads and / or / not as part of a value"),
     "on_error: next_item": ("0.4.0b1", "0.3.0b1", "stops the flow at a step with on_error: next_item"),
+    "list functions and comparisons in ${...}": (
+        "1.1.0", "1.0.1", "stop the step at sort_by, where, sum, and comparisons, and read ${a and b} as empty text"),
 }
+
+# Functions added in 1.1.0 (docs/design/list-functions.md)
+LIST_FUNCTIONS = {"sort_by", "where", "column", "sum", "min", "max", "average", "unique", "first", "last",
+                  "contains", "text", "ifelse"}
 
 
 REMOVED_IN = "Kinenix 2.0"
@@ -116,6 +123,23 @@ def _uses_expressions(steps: List[Step]) -> bool:
     return False
 
 
+def _uses_list_functions(steps: List[Step]) -> bool:
+    for step in steps:
+        for text in _placeholders([step.parameters, step.condition]):
+            if text.startswith("env.") or expressions.problem(text) is not None:
+                continue
+            try:
+                tree = expressions.parse(text)
+            except expressions.ExpressionError:
+                continue
+            for node in ast.walk(tree):
+                if isinstance(node, (ast.Compare, ast.BoolOp)) or (
+                        isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not)) or (
+                        isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in LIST_FUNCTIONS):
+                    return True
+    return False
+
+
 def _uses_boolean_conditions(steps: List[Step]) -> bool:
     from .conditions import parse_boolean
     for step in steps:
@@ -138,6 +162,8 @@ def _newer_features(flow: FlowDefinition) -> List[str]:
         used.append("expressions in ${...}")
     if _uses_boolean_conditions(steps):
         used.append("and / or / not in conditions")
+    if _uses_list_functions(steps):
+        used.append("list functions and comparisons in ${...}")
     if any(_on_error(s) == "next_item" for s in steps):
         used.append("on_error: next_item")
     return used
