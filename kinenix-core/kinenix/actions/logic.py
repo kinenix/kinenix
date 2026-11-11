@@ -5,6 +5,7 @@ from .base import BaseAction
 from ..engine import stopping
 from .registry import register_action
 from ..models.context import ExecutionContext
+from ..errors import FlowStructureError
 
 
 @register_action("logic.set_variable")
@@ -47,12 +48,40 @@ class IfAction(BaseAction):
 
 @register_action("logic.loop")
 class LoopAction(BaseAction):
-    """Loop iteration action. Handled with sub_steps by FlowInterpreter."""
-    accepted_parameters = ('items', 'item_var', 'item_label')
+    """Loop iteration action: over `items`, or `times` iterations. Handled with sub_steps by FlowInterpreter."""
+    accepted_parameters = ('items', 'times', 'item_var', 'item_label')
     side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         return {"action": "logic.loop"}
+
+
+@register_action("logic.break")
+class BreakAction(BaseAction):
+    """
+    Leaves the innermost logic.loop (docs/design/loop-control.md). Inside a loop FlowInterpreter handles it
+    and never calls this; reaching execute means the step is outside any loop of its flow.
+    """
+    accepted_parameters = ()
+    side_effects = ('none',)
+
+    def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
+        raise FlowStructureError("logic.break is outside a logic.loop; it can only leave a loop of its own flow, "
+                                 "not the loop of a flow that called this one.")
+
+
+@register_action("logic.next")
+class NextAction(BaseAction):
+    """
+    Skips the rest of this iteration of the innermost logic.loop, which counts as done (docs/design/loop-control.md).
+    Inside a loop FlowInterpreter handles it; reaching execute means the step is outside any loop of its flow.
+    """
+    accepted_parameters = ()
+    side_effects = ('none',)
+
+    def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
+        raise FlowStructureError("logic.next is outside a logic.loop; it can only skip to the next item of a loop "
+                                 "of its own flow, not of a flow that called this one.")
 
 
 @register_action("logic.append")
