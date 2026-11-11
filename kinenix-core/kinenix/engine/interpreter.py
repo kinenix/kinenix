@@ -21,7 +21,8 @@ from .. import __version__
 from ..actions.registry import ActionRegistry
 from ..envfile import read_env_file
 from ..actions.flow_control import SubflowExecutionError, is_business_error
-from ..models.context import ExecutionContext, StepResult, FailureDetails, local_now
+from ..models.context import ExecutionContext, StepResult, FailureDetails, counts_as_failed, local_now
+from .expressions import to_text
 from ..models.flow import FlowDefinition, Step
 
 
@@ -429,7 +430,7 @@ class FlowInterpreter:
 
         context.metrics.total_steps = len(context.step_results)
         context.metrics.successful_steps = sum(1 for r in context.step_results if r.status == "success")
-        context.metrics.failed_steps = sum(1 for r in context.step_results if r.status == "failed")
+        context.metrics.failed_steps = sum(1 for r in context.step_results if counts_as_failed(r))
         context.metrics.skipped_steps = sum(1 for r in context.step_results if r.status == "skipped")
         context.metrics.total_duration_seconds = total_duration
         items = context.get_variable("__items__")
@@ -490,6 +491,19 @@ class FlowInterpreter:
                             self._flow_failed(e, context)
         finally:
             context.set_variable("__section__", "steps")
+
+    def _custom_error_message(self, step: Step, error_info: Dict[str, Any], context: ExecutionContext) -> Optional[str]:
+        """The step's error_message, with ${error} as the action's own failure; None when it has none (#193)."""
+        template = step.error_handler.error_message if step.error_handler else None
+        if template is None or not str(template).strip():
+            return None
+        try:
+            value = VariableEvaluator.evaluate_value(str(template), {**context.variables, "error": error_info})
+        except Exception as e:
+            self.logger.logger.warning(f"Step '{step.id}' ({step.name}): error_message could not be read ({e}); "
+                                       f"the action's own message is kept.")
+            return None
+        return self.logger.redactor.redact_text(to_text(value))
 
     def _failure_count(self, context: ExecutionContext) -> int:
         """Failures recorded so far in this run, including those inside subflows."""
@@ -675,15 +689,25 @@ class FlowInterpreter:
         end_time = local_now()
         duration = (end_time - start_time).total_seconds()
         failure_diag = self._diagnose_failure(step, last_error, context)
+        error_info = self._error_info(step, last_error, failure_diag, attempt, context)
+        message = str(last_error)
+        custom = self._custom_error_message(step, error_info, context)
+        if custom is not None:
+            # error_message replaces the action's message everywhere: the log, ${error}, the run record (#193)
+            message = custom
+            failure_diag.error_message = custom
+            error_info["message"] = custom
         context.set_variable("__last_failure__", failure_diag)
         # ${error} describes the failure in Steps; failures inside On Error and Finally do not replace it
         if (context.get_variable("__section__") or "steps") == "steps":
-            context.set_variable("error", self._error_info(step, last_error, failure_diag, attempt, context))
+            context.set_variable("error", error_info)
 
         section = context.get_variable("__section__") or "steps"
         on_error = str(handler.on_error).strip().lower() if handler else ""
         if handler and handler.fallback_step_id:
             handled = "fallback"
+        elif on_error == "ignore":
+            handled = "ignored"  # recorded, but not a failure of the item or the run (#197)
         elif on_error == "next_item" and context.get_variable("__loop_depth__"):
             handled = "next_item"  # outside a loop, next_item stops the run like fail (kinenix validate says so)
         elif on_error == "continue" or section != "steps":
@@ -698,6 +722,9 @@ class FlowInterpreter:
         else:
             origin = None
             context.set_variable("__failures__", (context.get_variable("__failures__") or 0) + 1)
+        if handled == "ignored":
+            # Neither this step nor what failed inside it (a subflow) makes the item or the run fail
+            context.set_variable("__failures__", failures_before)
 
         result = StepResult(
             step_id=step.id,
@@ -707,7 +734,7 @@ class FlowInterpreter:
             start_time=start_time,
             end_time=end_time,
             duration_seconds=duration,
-            error_message=str(last_error),
+            error_message=message,
             error_type=failure_diag.error_type,
             retries=attempt,
             failure={
@@ -737,7 +764,7 @@ class FlowInterpreter:
             self._execute_step(fallback_step, context)
             return
 
-        if on_error == "continue":
+        if on_error in ("continue", "ignore"):
             return
         if handled == "next_item":
             raise _NextItem(str(last_error)) from last_error

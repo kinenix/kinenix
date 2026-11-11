@@ -41,6 +41,15 @@ class ExecutionMetrics(BaseModel):
     cost_saved: float = Field(default=0.0, description="Estimated operational cost saved")
 
 
+def is_ignored(result: "StepResult") -> bool:
+    """A failed step with on_error: ignore: recorded, but not counted as a failure (#197)."""
+    return result.status == "failed" and (result.failure or {}).get("handled") == "ignored"
+
+
+def counts_as_failed(result: "StepResult") -> bool:
+    return result.status == "failed" and not is_ignored(result)
+
+
 class FailureDetails(BaseModel):
     failed_step_id: str = Field(..., description="ID of the step that triggered the failure")
     failed_step_name: str = Field(..., description="Human-readable name of the failed step")
@@ -77,7 +86,7 @@ class ExecutionContext(BaseModel):
         """
         if self.has_error or self.interrupted:
             return False
-        return (self.items or {}).get("failed", 0) > 0 or any(r.status == "failed" for r in self.step_results)
+        return (self.items or {}).get("failed", 0) > 0 or any(counts_as_failed(r) for r in self.step_results)
 
     def set_variable(self, name: str, value: Any) -> None:
         self.variables[name] = value

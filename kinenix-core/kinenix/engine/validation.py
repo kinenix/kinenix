@@ -22,6 +22,7 @@ STEP_LEVEL_KEYS = {
     "max_retries": "error_handler",
     "retry_interval": "error_handler",
     "fallback_step_id": "error_handler",
+    "error_message": "error_handler",
     "output_var": "the step's output_var",
     "condition": "the step's condition",
 }
@@ -70,7 +71,7 @@ def _all_steps(flow: FlowDefinition) -> List[Step]:
     return list(flow.steps) + list(flow.on_error_steps or []) + list(flow.finally_steps or [])
 
 
-ON_ERROR_VALUES = ("fail", "stop", "retry", "continue", "next_item")
+ON_ERROR_VALUES = ("fail", "stop", "retry", "continue", "ignore", "next_item")
 
 # What older Kinenix versions would run wrongly instead of refusing: feature -> (first version that
 # understands it, the last version that does not, what the older version does). item_label is only
@@ -82,6 +83,8 @@ NEWER_FEATURES = {
     "expressions in ${...}": ("0.3.0b1", "0.2.0b4", "turns expressions such as ${len(rows)} into empty text"),
     "and / or / not in conditions": ("0.3.0b1", "0.2.0b4", "reads and / or / not as part of a value"),
     "on_error: next_item": ("0.4.0b1", "0.3.0b1", "stops the flow at a step with on_error: next_item"),
+    "on_error: ignore": ("1.1.0", "1.0.1", "stops the flow at a step with on_error: ignore"),
+    "error_message": ("1.1.0", "1.0.1", "ignores error_message and reports the action's own message"),
     "list functions and comparisons in ${...}": (
         "1.1.0", "1.0.1", "stop the step at sort_by, where, sum, and comparisons, and read ${a and b} as empty text"),
 }
@@ -166,6 +169,10 @@ def _newer_features(flow: FlowDefinition) -> List[str]:
         used.append("list functions and comparisons in ${...}")
     if any(_on_error(s) == "next_item" for s in steps):
         used.append("on_error: next_item")
+    if any(_on_error(s) == "ignore" for s in steps):
+        used.append("on_error: ignore")
+    if any(s.error_handler and s.error_handler.error_message for s in steps):
+        used.append("error_message")
     return used
 
 

@@ -283,3 +283,12 @@ def test_the_exit_code_and_the_hub_agree_on_a_run(steps, status, code):
     context = FlowInterpreter(logger=ExecutionLogger(log_dir=None)).run_flow(markdown_to_flow(f"# Run\n\n## Steps\n\n{steps}"))
     assert run_status(context.model_dump(mode="json")) == status
     assert exit_codes.for_run(context) == code
+
+
+def test_a_step_with_on_error_ignore_does_not_make_the_run_partial():
+    """on_error: ignore (#197): the failure is recorded, but the run is not partial."""
+    from kinenix_hub.services.run_records import run_status
+    ignored = {"status": "failed", "failure": {"handled": "ignored"}}
+    continued = {"status": "failed", "failure": {"handled": "continued"}}
+    assert run_status({"step_results": [ignored]}) == "success"
+    assert run_status({"step_results": [ignored, continued]}) == "partial"
