@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from . import __version__
 from . import query as hub_query
 from .config import DATABASE_URL, HOST, PORT, STATIC_DIR, VIEWS_DIR
-from .database import get_db, init_db
+from .database import get_db, get_write_db, init_db
 from .models import Worker, Execution
 from .security import require_worker_api_key, require_dashboard_auth, log_auth_mode
 from .services.telemetry_service import record_heartbeat, ingest_execution_log, step_summaries
@@ -90,7 +90,7 @@ def check_worker_key():
 
 
 @app.post("/api/v1/heartbeat", dependencies=[Depends(require_worker_api_key)])
-def heartbeat(req: HeartbeatRequest, db: Session = Depends(get_db)):
+def heartbeat(req: HeartbeatRequest, db: Session = Depends(get_write_db)):
     worker = record_heartbeat(
         db=db,
         worker_id=req.worker_id,
@@ -111,7 +111,7 @@ def list_workers(db: Session = Depends(get_db)):
 
 
 @app.post("/api/v1/telemetry", dependencies=[Depends(require_worker_api_key)])
-def receive_telemetry(req: TelemetryRequest, db: Session = Depends(get_db)):
+def receive_telemetry(req: TelemetryRequest, db: Session = Depends(get_write_db)):
     execution = ingest_execution_log(
         db=db,
         payload=req.payload,
@@ -156,18 +156,21 @@ def get_execution_steps(execution_id: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/v1/executions/{execution_id}/reanalyze", dependencies=[Depends(require_worker_api_key)])
-def reanalyze_execution(execution_id: str, db: Session = Depends(get_db)):
+def reanalyze_execution(execution_id: str, db: Session = Depends(get_write_db)):
     execution = db.query(Execution).filter(Execution.id == execution_id).first()
     if not execution:
         raise HTTPException(status_code=404, detail="Execution not found")
 
-    ai_res = analyze_failure(
+    facts = dict(
         flow_name=execution.flow_name,
         failed_step_name=execution.failed_step_name,
         error_message=execution.error_message,
         exception_class=execution.exception_class,
         error_type=execution.error_type
     )
+    # The central LLM may take seconds; do not hold the database's write lock while it answers (#201)
+    db.rollback()
+    ai_res = analyze_failure(**facts)
     execution.ai_category = ai_res.get("category")
     execution.ai_confidence = ai_res.get("confidence")
     execution.ai_summary = ai_res.get("summary")

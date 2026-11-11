@@ -2,6 +2,12 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+### Fixed
+
+- The Hub answered HTTP 500 "database is locked" now and then when a heartbeat and a run from the same worker arrived together, so the worker reported a failed send for a run that was stored (#201). Writes to a SQLite `hub.db` now take the write lock at their start and wait for each other, the failure analysis no longer holds the lock while the central LLM answers, and a failed update of the worker's status after a run is stored is logged instead of answered with an error.
+
 ## 1.0.0 (2026-11-10)
 
 The stable core. From this version, the `flow.md` format, action names and parameters, CLI commands, exit codes, the log format, and the Hub's API and views stay compatible for all of 1.x ([docs/compatibility.md](docs/compatibility.md)). It is 1.0.0rc4 after a 24-hour soak on a Raspberry Pi and an install as a new Linux user, with the changes below.
