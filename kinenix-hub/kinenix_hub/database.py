@@ -26,12 +26,27 @@ if engine.dialect.name == "sqlite":
     from .migrations import make_sqlite_transactional
     make_sqlite_transactional(engine)
 
+from .migrations import WRITE_OPTION  # noqa: E402
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# For endpoints that write: on SQLite each transaction takes the write lock at its start, so two
+# writes wait for each other (busy_timeout) instead of failing with "database is locked" (#201).
+# Keep slow work, such as a call to the central LLM, outside these transactions.
+WriteSessionLocal = sessionmaker(autocommit=False, autoflush=False,
+                                 bind=engine.execution_options(**{WRITE_OPTION: True}))
 Base = declarative_base()
 
 
 def get_db():
     db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def get_write_db():
+    db = WriteSessionLocal()
     try:
         yield db
     finally:

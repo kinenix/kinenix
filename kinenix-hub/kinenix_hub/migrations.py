@@ -24,6 +24,9 @@ logger = logging.getLogger("kinenix.hub")
 
 _transactional_engines: "weakref.WeakSet[Engine]" = weakref.WeakSet()
 
+# Execution option of the engine behind write sessions (database.WriteSessionLocal)
+WRITE_OPTION = "kinenix_write"
+
 
 def make_sqlite_transactional(engine: Engine) -> None:
     """
@@ -40,7 +43,10 @@ def make_sqlite_transactional(engine: Engine) -> None:
 
     @event.listens_for(engine, "begin")
     def _begin(conn):
-        conn.exec_driver_sql("BEGIN")
+        # A session that will write takes the write lock at its first statement (#201). With a plain
+        # BEGIN, a transaction that reads and then writes fails at once with "database is locked" when
+        # another connection wrote in between: SQLite cannot wait for it, so busy_timeout does not help.
+        conn.exec_driver_sql("BEGIN IMMEDIATE" if conn.get_execution_options().get(WRITE_OPTION) else "BEGIN")
 
     _transactional_engines.add(engine)
     engine.dispose()  # pooled connections were opened before the listeners existed
