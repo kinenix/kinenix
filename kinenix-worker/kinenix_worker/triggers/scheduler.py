@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional
 
 from ..runner import WorkerRunner
@@ -43,6 +43,17 @@ class CronSchedulerTrigger:
 
     def describe(self) -> str:
         return f"cron '{self.cron}'" if self.cron else f"every {self.interval_seconds}s"
+
+    def first_run(self, now: Optional[datetime] = None) -> str:
+        """When the first run happens, for the start-up log line (#156)."""
+        current = now or datetime.now()
+        if self.cron:
+            due = self.cron.next_after(current - timedelta(minutes=1))
+            return f"next run {due:%Y-%m-%d %H:%M}" if due else "no matching time within four years"
+        if self.run_at_start:
+            return "first run now"
+        due = current + timedelta(seconds=self.interval_seconds)
+        return f"first run {due:%Y-%m-%d %H:%M:%S}"
 
     def should_run(self, now: Optional[datetime] = None) -> bool:
         current = now or datetime.now()
@@ -98,7 +109,7 @@ class CronSchedulerTrigger:
         """
         Runs the scheduler loop continuously.
         """
-        logger.info(f"Starting scheduler on flow '{self.flow_path}' {self.describe()}")
+        logger.info(f"Starting scheduler on flow '{self.flow_path}' {self.describe()}, {self.first_run()}")
         while True:
             if stop_event and getattr(stop_event, "is_set", lambda: False)():
                 logger.info("Scheduler received stop event. Terminating loop.")
