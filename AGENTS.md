@@ -129,6 +129,7 @@ When you change code so that it matches a target, update this table and `docs/ro
 | `KINENIX_FLOWS_DIR` | kinenix-core, kinenix-worker | The user's flows folder (default `~/kinenix-flows`, or the setting saved in `~/.kinenix/kinenix.env`); `kinenix init` creates projects there and `kinenix run NAME` finds them |
 | `KINENIX_WORKER_ID` | kinenix-core, kinenix-worker | Worker identifier in telemetry and heartbeats; kinenix-worker defaults to the host name |
 | `KINENIX_HEARTBEAT_INTERVAL` | kinenix-worker | Seconds between heartbeats while a worker command runs (default 30) |
+| `KINENIX_WORKER_LOG_LEVEL` | kinenix-worker | Level of the worker's own messages (triggers started and fired) in `watch`, `schedule`, and `daemon` (default INFO) |
 | `KINENIX_HUB_DASHBOARD_USER` / `KINENIX_HUB_DASHBOARD_PASSWORD` | kinenix-hub | Basic Auth for the dashboard and read endpoints; unset password means localhost-only |
 | `KINENIX_HUB_HOST` / `KINENIX_HUB_PORT` | kinenix-hub | Bind address (default `127.0.0.1`, localhost only) and port |
 | `KINENIX_HUB_SETTINGS_FILE` | kinenix-hub | Saved settings from `kinenix hub setup` (default `~/.kinenix/hub.env`); environment variables override it |

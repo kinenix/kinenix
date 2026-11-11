@@ -6,8 +6,8 @@ a day matches if either one does.
 
 Examples: "0 8 1 * *" (08:00 on the 1st of every month), "30 7 * * 1-5" (07:30 Monday to Friday).
 """
-from datetime import datetime
-from typing import FrozenSet, Tuple
+from datetime import datetime, timedelta
+from typing import FrozenSet, Optional, Tuple
 
 _FIELDS: Tuple[Tuple[str, int, int], ...] = (
     ("minute", 0, 59),
@@ -70,6 +70,15 @@ class CronExpression:
         if self._day_restricted and self._weekday_restricted:
             return day_ok or weekday_ok
         return day_ok and weekday_ok
+
+    def next_after(self, moment: datetime) -> Optional[datetime]:
+        """The first matching minute after `moment`, within about four years (for logs), or None."""
+        current = moment.replace(second=0, microsecond=0) + timedelta(minutes=1)
+        for _ in range(4 * 366 * 24 * 60):
+            if self.matches(current):
+                return current
+            current += timedelta(minutes=1)
+        return None
 
     def __str__(self) -> str:
         return self.expression
