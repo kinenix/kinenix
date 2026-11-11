@@ -275,6 +275,25 @@ def _next_is_available(page: Page, next_selector: str) -> bool:
     return not control.evaluate(_IS_DISABLED_JS)
 
 
+ITEM_ERROR_VALUES = ("fail", "skip")
+
+
+def _on_item_error(parameters: Dict[str, Any], action: str) -> str:
+    """`on_item_error`: fail (default) stops the step at the first item that cannot be read; skip leaves it out (#192)."""
+    value = str(parameters.get("on_item_error") or "fail").strip().lower()
+    if value not in ITEM_ERROR_VALUES:
+        raise ValueError(f"{action}: on_item_error must be fail or skip, not '{parameters.get('on_item_error')}'.")
+    return value
+
+
+def _report_skipped(action: str, skipped: List[str], total: int) -> None:
+    """One warning for the items left out with on_item_error: skip, with the first reasons, so none is lost silently."""
+    if not skipped:
+        return
+    shown = "; ".join(skipped[:5]) + (f"; and {len(skipped) - 5} more" if len(skipped) > 5 else "")
+    logger.warning(f"{action}: skipped {len(skipped)} of {total} item(s) (on_item_error: skip): {shown}")
+
+
 def _read_pages(page: Page, parameters: Dict[str, Any], action: str,
                 read: Callable[[], List[Any]], signature: Callable[[], str]) -> List[Any]:
     """
@@ -308,11 +327,13 @@ def _read_pages(page: Page, parameters: Dict[str, Any], action: str,
 @register_action("web.get_table")
 class WebGetTableAction(BaseAction):
     """Reads an HTML <table> into a list of row dicts keyed by the header cells, following its pages when asked."""
-    accepted_parameters = LOCATOR_PARAMETERS + ('columns', 'numeric_columns', 'add_columns', 'min_rows', 'timeout') + PAGING_PARAMETERS
+    accepted_parameters = LOCATOR_PARAMETERS + ('columns', 'numeric_columns', 'add_columns', 'min_rows', 'timeout',
+                                                'on_item_error') + PAGING_PARAMETERS
     side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
+        on_item_error = _on_item_error(parameters, "web.get_table")
         locator = _resolve_locator(page, parameters).first
         timeout = float(parameters.get("timeout", 30000))
         columns = parameters.get("columns")
@@ -338,18 +359,32 @@ class WebGetTableAction(BaseAction):
             rows = [{target: row.get(source, "") for source, target in mapping.items()} for row in rows]
 
         # numeric_columns: convert cell text such as "1,234.50" to numbers; blank cells become None
-        for name in parameters.get("numeric_columns") or []:
-            for row in rows:
-                if name not in row:
-                    raise ValueError(f"web.get_table: numeric column '{name}' not found; columns are {list(row)}")
-                text = str(row[name]).replace(",", "").strip()
-                if text in ("", "-"):
-                    row[name] = None
-                    continue
-                try:
-                    row[name] = float(text)
-                except ValueError:
-                    raise ValueError(f"web.get_table: value '{row[name]}' in column '{name}' is not a number") from None
+        numeric_columns = parameters.get("numeric_columns") or []
+        if rows:
+            missing = [name for name in numeric_columns if name not in rows[0]]
+            if missing:
+                raise ValueError(f"web.get_table: numeric column '{missing[0]}' not found; columns are {list(rows[0])}")
+        kept, skipped = [], []
+        for number, row in enumerate(rows, start=1):
+            try:
+                for name in numeric_columns:
+                    text = str(row[name]).replace(",", "").strip()
+                    if text in ("", "-"):
+                        row[name] = None
+                        continue
+                    try:
+                        row[name] = float(text)
+                    except ValueError:
+                        raise ValueError(f"web.get_table: row {number}: value '{row[name]}' in column '{name}' "
+                                         f"is not a number") from None
+            except ValueError as e:
+                if on_item_error != "skip":
+                    raise
+                skipped.append(str(e).replace("web.get_table: ", ""))
+                continue
+            kept.append(row)
+        _report_skipped("web.get_table", skipped, len(rows))
+        rows = kept
 
         if add_columns:
             if not isinstance(add_columns, dict):
@@ -377,7 +412,7 @@ class WebGetListAction(BaseAction):
     element matching `selector`, one value per field, each field found inside that element.
     """
     accepted_parameters = ('selector', 'fields', 'numeric_fields', 'required_fields', 'add_columns', 'min_rows',
-                           'timeout') + PAGING_PARAMETERS
+                           'timeout', 'on_item_error') + PAGING_PARAMETERS
     side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
@@ -391,6 +426,7 @@ class WebGetListAction(BaseAction):
                              'for example {"name": "h3", "price": ".price", "link": "a@href"}.')
         numeric = list(parameters.get("numeric_fields") or [])
         required = list(parameters.get("required_fields") or [])
+        on_item_error = _on_item_error(parameters, "web.get_list")
         unknown = [name for name in numeric + required if name not in fields]
         if unknown:
             raise ValueError(f"web.get_list: {unknown} are not in fields ({', '.join(fields)}).")
@@ -427,17 +463,28 @@ class WebGetListAction(BaseAction):
         rows = _read_pages(page, parameters, "web.get_list", read_page, lambda: "\n".join(items.all_inner_texts()))
 
         from ..engine.expressions import parse_number
+        kept, skipped = [], []
         for number, row in enumerate(rows, start=1):
-            for name in required:
-                if row[name] == "":
-                    raise ValueError(f"web.get_list: item {number} has no '{name}' (selector '{fields[name]}'); "
-                                     f"the item reads {row}.")
-            # Blank and "-" become None, as in web.get_table; text with no number in it is an error
-            for name in numeric:
-                try:
-                    row[name] = parse_number(row[name]) if row[name] not in ("", "-") else None
-                except ValueError as e:
-                    raise ValueError(f"web.get_list: item {number}, field '{name}': {e}") from None
+            try:
+                for name in required:
+                    if row[name] == "":
+                        raise ValueError(f"web.get_list: item {number} has no '{name}' (selector '{fields[name]}'); "
+                                         f"the item reads {row}.")
+                # Blank and "-" become None, as in web.get_table; text with no number in it is an error
+                for name in numeric:
+                    try:
+                        row[name] = parse_number(row[name]) if row[name] not in ("", "-") else None
+                    except ValueError as e:
+                        raise ValueError(f"web.get_list: item {number}, field '{name}': {e}") from None
+            except ValueError as e:
+                if on_item_error != "skip":
+                    raise
+                # The reason without the item's whole content, which may hold personal data
+                skipped.append(str(e).replace("web.get_list: ", "").split("; the item reads")[0])
+                continue
+            kept.append(row)
+        _report_skipped("web.get_list", skipped, len(rows))
+        rows = kept
         if add_columns:
             rows = [{**add_columns, **row} for row in rows]
         if len(rows) < min_rows:

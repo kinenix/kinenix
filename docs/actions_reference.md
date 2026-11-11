@@ -227,6 +227,7 @@ Reads an HTML `<table>` into a list of rows, one dictionary per row keyed by the
 | `numeric_columns` | list | No | `[]` | Columns (after renaming) converted to numbers; thousands separators are removed, and blank or `-` cells become empty. Text that is not a number fails the step |
 | `add_columns` | dict | No | `{}` | Fixed values added as the first columns of every row, for example the currency a table belongs to |
 | `min_rows` | number | No | `0` | Fail the step when fewer rows are found, so an empty result stops the flow instead of producing an empty report |
+| `on_item_error` | string | No | `fail` | Kinenix 1.1.0. `skip` leaves out a row whose `numeric_columns` value is not a number, instead of failing the step; one warning in the log says how many rows were left out and why. `min_rows` counts the rows that are kept |
 | `timeout` | number | No | `30000` | Milliseconds to wait for the table to exist, and for the content to change after each `next_selector` click |
 | `next_selector` | string | No | - | The "next page" button or link of a paged table (Kinenix 0.4.0b1). It is clicked until it is gone or disabled (`disabled`, `aria-disabled="true"`, or a `disabled` class on it or its parents, as in DataTables and Bootstrap), and the rows of every page are returned in order. Each click waits until the content has changed |
 | `max_pages` | number | No | `20` | The most pages read with `next_selector`. More pages than this fails the step instead of leaving pages out without notice |
@@ -266,7 +267,8 @@ Reads repeated elements, such as product cards or search results, into a list of
 | `numeric_fields` | list | No | `[]` | Fields converted to numbers, the way `number()` reads them in expressions: the first number in the text, so `"15,434.75 บาท/ปี"` is `15434.75`. Blank and `-` become empty; text with no number fails the step |
 | `required_fields` | list | No | `[]` | Fields that must not be empty; an element without one fails the step, naming the element and what it reads |
 | `add_columns` | dict | No | `{}` | Fixed values added as the first columns of every row, for example the request the results belong to |
-| `min_rows` | number | No | `0` | Fail the step when fewer elements are found |
+| `min_rows` | number | No | `0` | Fail the step when fewer elements are found; with `on_item_error: skip`, only the items kept count |
+| `on_item_error` | string | No | `fail` | Kinenix 1.1.0. `skip` leaves out an item that has an empty `required_fields` field or a `numeric_fields` field with no number, instead of failing the step and losing every page read so far. One warning in the log says how many items were left out and why (`skipped 2 of 40 item(s): item 14 has no 'title'; ...`), without their content |
 | `timeout` | number | No | `30000` | Milliseconds to wait for the first element, and for the content to change after each `next_selector` click |
 | `next_selector` | string | No | - | The "next page" or "more" control, as in `web.get_table`; the rows of every page are returned in order |
 | `max_pages` | number | No | `20` | The most pages read with `next_selector`; more fails the step |
@@ -284,6 +286,23 @@ Reads repeated elements, such as product cards or search results, into a list of
 ```
 
 Returns, for example: `[{"request_id": "R001", "name": "Class 1 Plus", "premium": 15434.75, "details": "/packages/123"}, ...]`.
+
+**Example: every page, leaving out books that cannot be read (Kinenix 1.1.0):**
+```markdown
+> Requires: kinenix>=1.1.0
+
+### 3. Read All Books (`web.get_list`)
+- **output_var:** `books`
+- **selector:** `article.product_pod`
+- **fields:** {"title": "h3 a@title", "price": ".price_color", "rating_class": "p.star-rating@class"}
+- **numeric_fields:** ["price"]
+- **required_fields:** ["title"]
+- **next_selector:** `li.next a`
+- **max_pages:** 50
+- **on_item_error:** skip
+```
+
+A page that does not load still fails the step. To go on after a page that fails, loop over the pages yourself with `logic.loop` and `times`, `on_error: next_item` on the read, and `logic.break` when there is no next page ([logic.loop](#logicloop)).
 
 ---
 
