@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, Optional
 
 from ..runner import WorkerRunner
@@ -23,7 +23,8 @@ class CronSchedulerTrigger:
         extra_vars: Optional[Dict[str, Any]] = None,
         runner: Optional[WorkerRunner] = None,
         callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        cron: Optional[str] = None
+        cron: Optional[str] = None,
+        run_at_start: bool = True
     ):
         self.flow_path = flow_path
         self.interval_seconds = max(0.1, float(interval_seconds))
@@ -35,9 +36,24 @@ class CronSchedulerTrigger:
         self.cron = CronExpression(cron) if cron else None
 
         self.last_run_time: Optional[datetime] = None
+        # An interval trigger runs once when the daemon starts, then every interval. With
+        # run_at_start false, the first run waits one interval, so a restart does not run it again (#171)
+        self.run_at_start = bool(run_at_start)
+        self._started_at: Optional[datetime] = None
 
     def describe(self) -> str:
         return f"cron '{self.cron}'" if self.cron else f"every {self.interval_seconds}s"
+
+    def first_run(self, now: Optional[datetime] = None) -> str:
+        """When the first run happens, for the start-up log line (#156)."""
+        current = now or datetime.now()
+        if self.cron:
+            due = self.cron.next_after(current - timedelta(minutes=1))
+            return f"next run {due:%Y-%m-%d %H:%M}" if due else "no matching time within four years"
+        if self.run_at_start:
+            return "first run now"
+        due = current + timedelta(seconds=self.interval_seconds)
+        return f"first run {due:%Y-%m-%d %H:%M:%S}"
 
     def should_run(self, now: Optional[datetime] = None) -> bool:
         current = now or datetime.now()
@@ -47,7 +63,11 @@ class CronSchedulerTrigger:
                 self.last_run_time.replace(second=0, microsecond=0) == current.replace(second=0, microsecond=0)
             return self.cron.matches(current) and not already_ran
         if self.last_run_time is None:
-            return True
+            if self.run_at_start:
+                return True
+            if self._started_at is None:
+                self._started_at = current
+            return (current - self._started_at).total_seconds() >= self.interval_seconds
         elapsed = (current - self.last_run_time).total_seconds()
         return elapsed >= self.interval_seconds
 
@@ -89,7 +109,7 @@ class CronSchedulerTrigger:
         """
         Runs the scheduler loop continuously.
         """
-        logger.info(f"Starting scheduler on flow '{self.flow_path}' {self.describe()}")
+        logger.info(f"Starting scheduler on flow '{self.flow_path}' {self.describe()}, {self.first_run()}")
         while True:
             if stop_event and getattr(stop_event, "is_set", lambda: False)():
                 logger.info("Scheduler received stop event. Terminating loop.")

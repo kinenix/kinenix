@@ -2,6 +2,21 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## 1.0.1 (2026-11-11)
+
+Fixes for 1.0.0, found in its soak on a Raspberry Pi and in the issues left from the release candidates. Nothing changes for flows. Upgrade all three packages together: kinenix-hub 1.0.1 needs kinenix 1.0.1.
+
+### Added
+
+- `"run_at_start": false` on an interval scheduler in `triggers.json` waits one interval before the first run, so restarting the worker does not run the flow again (#171). Without it, an interval scheduler still runs once when the daemon starts.
+
+### Fixed
+
+- `kinenix-worker daemon` did not log which triggers it started or when each one fired, so `journalctl` could not show the schedule (#156). `watch`, `schedule`, and `daemon` now log each trigger at start, with its next run, and each firing, in the same format as a run; `KINENIX_WORKER_LOG_LEVEL=WARNING` keeps them quiet.
+- The Hub answered HTTP 500 "database is locked" now and then when a heartbeat and a run from the same worker arrived together, so the worker reported a failed send for a run that was stored (#201). Writes to a SQLite `hub.db` now take the write lock at their start and wait for each other, the failure analysis no longer holds the lock while the central LLM answers, and a failed update of the worker's status after a run is stored is logged instead of answered with an error.
+- A bundle's `.env` read `export NAME=value` as a variable named `export NAME`, and kept ` # note` after a value as part of it (#171). One reader now handles `.env` and the settings files in `~/.kinenix`: `export` is accepted, a value in quotes is taken as written, and in `.env` a `#` after a space or tab starts a comment.
+- The Hub suggested `ai_match: true` for any selector that was not found, but only `web.select_option` accepts it (#171).
+
 ## 1.0.0 (2026-11-10)
 
 The stable core. From this version, the `flow.md` format, action names and parameters, CLI commands, exit codes, the log format, and the Hub's API and views stay compatible for all of 1.x ([docs/compatibility.md](docs/compatibility.md)). It is 1.0.0rc4 after a 24-hour soak on a Raspberry Pi and an install as a new Linux user, with the changes below.

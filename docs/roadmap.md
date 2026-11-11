@@ -20,6 +20,7 @@ Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
 | 0.4.0b1: Web actions | Modern web pages without multi-step workarounds | 2026-10-23 | Released |
 | 0.5.0b1: Proven on business flows | A tutorial and a business example, run by CI with a real browser, and testing flows against saved pages | 2026-10-28 | Released |
 | 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-10 | Released |
+| 1.0.1: Fixes | Bugs found after 1.0.0: Hub writes that met (#201), `.env` parsing and interval triggers (#171), worker trigger logs (#156) | 2026-11-11 | Released |
 | 1.1.0: Flow data tools | Fix what real flows written by AI assistants ran into: sorting, filtering, and totals on lists, shorter conditions, loops that stop early, clearer errors | After 1.0.0 | Planned |
 | 1.2.0: Developer tools | See and check flows in the editor | After 1.1.0 | Planned |
 | 1.3.0: Hardening and docs | Close the open findings of the threat model, a security guide, and the website organized by purpose | After 1.2.0 | Planned |

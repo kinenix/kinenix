@@ -12,6 +12,8 @@ import secrets
 from pathlib import Path
 from typing import Dict
 
+from kinenix.envfile import read_env_file
+
 PBKDF2_ITERATIONS = 300_000
 
 
@@ -39,18 +41,12 @@ def settings_path() -> Path:
 
 def read_settings(path: Path) -> Dict[str, str]:
     """KEY=VALUE pairs; legacy ORCHESTRATOR_* keys are returned under their KINENIX_HUB_* names."""
-    if not path.is_file():
-        return {}
     values = {}
-    for line in path.read_text(encoding="utf-8-sig").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
+    # Written by `kinenix hub setup` without quotes, so no inline comments here, as for kinenix.env
+    for key, value in read_env_file(path, inline_comments=False).items():
         if key.startswith(LEGACY_PREFIX):
             key = CURRENT_PREFIX + key[len(LEGACY_PREFIX):]
-        values[key] = value.strip()
+        values[key] = value
     return values
 
 

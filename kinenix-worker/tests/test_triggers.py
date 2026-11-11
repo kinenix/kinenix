@@ -113,3 +113,40 @@ def test_trigger_manager_config_loading(tmp_path):
     manager.start_all(blocking=False)
     time.sleep(0.1)
     manager.stop()
+
+
+def test_interval_trigger_runs_at_start_by_default():
+    from datetime import datetime
+    sched = CronSchedulerTrigger(flow_path="daily", interval_seconds=86400, runner=MagicMock())
+    assert sched.should_run(datetime(2026, 11, 11, 9, 0)) is True
+
+
+def test_run_at_start_false_waits_one_interval_before_the_first_run():
+    from datetime import datetime, timedelta
+    start = datetime(2026, 11, 11, 9, 0)
+    sched = CronSchedulerTrigger(flow_path="daily", interval_seconds=3600, runner=MagicMock(), run_at_start=False)
+    assert sched.should_run(start) is False
+    assert sched.should_run(start + timedelta(minutes=59)) is False
+    assert sched.should_run(start + timedelta(hours=1)) is True
+    sched.last_run_time = start + timedelta(hours=1)
+    assert sched.should_run(start + timedelta(hours=1, minutes=30)) is False
+    assert sched.should_run(start + timedelta(hours=2)) is True
+
+
+def test_run_at_start_is_read_from_triggers_json(tmp_path):
+    cfg = tmp_path / "triggers.json"
+    cfg.write_text(json.dumps({"triggers": [
+        {"type": "scheduler", "flow": "a", "interval_seconds": 60},
+        {"type": "scheduler", "flow": "b", "interval_seconds": 60, "run_at_start": False},
+    ]}), encoding="utf-8")
+    manager = TriggerManager(runner=MagicMock())
+    manager.load_from_config(str(cfg))
+    assert [t.run_at_start for t in manager.triggers] == [True, False]
+
+
+def test_run_at_start_as_text_stops_the_daemon_at_load(tmp_path):
+    cfg = tmp_path / "triggers.json"
+    cfg.write_text(json.dumps({"triggers": [
+        {"type": "scheduler", "flow": "a", "interval_seconds": 60, "run_at_start": "false"}]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="run_at_start"):
+        TriggerManager(runner=MagicMock()).load_from_config(str(cfg))

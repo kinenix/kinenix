@@ -199,7 +199,24 @@ A scheduler runs either every `interval_seconds` or, when `cron` is set, at the 
 | `*/15 * * * *` | Every 15 minutes |
 | `0 9 1,15 * *` | 09:00 on the 1st and 15th |
 
-An invalid expression stops the daemon at startup with the field that is wrong. Check the Pi's time zone with `timedatectl` (set it with `sudo timedatectl set-timezone Asia/Bangkok`).
+An invalid expression stops the daemon at startup with the field that is wrong.
+
+A scheduler with `interval_seconds` runs once as soon as the daemon starts, then every interval, so every restart runs it again. Add `"run_at_start": false` to wait one interval before its first run; for a fixed time of day, use `cron` instead:
+
+```json
+{ "type": "scheduler", "flow": "cleanup", "interval_seconds": 21600, "run_at_start": false }
+``` Check the Pi's time zone with `timedatectl` (set it with `sudo timedatectl set-timezone Asia/Bangkok`).
+
+At start, the log shows each trigger and when it runs first, then a line each time one fires:
+
+```text
+[2026-11-11 09:00:00,120] [INFO] Starting scheduler on flow 'soak-hello' every 1800.0s, first run now
+[2026-11-11 09:00:00,121] [INFO] Starting scheduler on flow 'bot_fx_rate' cron '0 8 * * *', next run 2026-11-12 08:00
+[2026-11-11 09:00:00,122] [INFO] Started 2 triggers in background daemon.
+[2026-11-11 09:00:00,130] [INFO] Scheduler triggering flow: soak-hello at 2026-11-11T09:00:00.125311
+```
+
+Set `KINENIX_WORKER_LOG_LEVEL=WARNING` in `worker.env` to keep only warnings and errors from the worker itself; the output of each run does not change.
 
 | Task | Command |
 | :--- | :--- |

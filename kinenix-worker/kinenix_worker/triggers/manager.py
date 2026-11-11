@@ -17,6 +17,13 @@ logger = logging.getLogger("kinenix_worker.trigger.manager")
 STOP_WAIT_SECONDS = 60
 
 
+def _flag(value: Any, name: str) -> bool:
+    """A true/false setting of a trigger; the text "false" would otherwise count as true."""
+    if isinstance(value, bool):
+        return value
+    raise ValueError(f"'{name}' in triggers.json must be true or false, not {json.dumps(value)}")
+
+
 class TriggerManager:
     """
     Manages multiple concurrent triggers (file watchers, schedulers).
@@ -74,7 +81,8 @@ class TriggerManager:
                         interval_seconds=sec,
                         runner=self.runner,
                         extra_vars=item.get("vars", {}),
-                        cron=item.get("cron")  # e.g. "0 8 1 * *"; an invalid expression stops the daemon at load
+                        cron=item.get("cron"),  # e.g. "0 8 1 * *"; an invalid expression stops the daemon at load
+                        run_at_start=_flag(item.get("run_at_start", True), "run_at_start")
                     )
                 )
             else:

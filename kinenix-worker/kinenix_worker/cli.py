@@ -10,6 +10,7 @@ from rich.console import Console
 
 from . import __version__, display
 from .hub_client import HeartbeatThread, HubClient
+from .logs import configure_logging
 from .runner import WorkerRunner
 
 
@@ -120,6 +121,7 @@ def main():
             sys.exit(exit_codes.TECHNICAL)
 
     if args.command == "watch":
+        configure_logging()
         from .triggers.watcher import FileWatcherTrigger
 
         extra_vars = {}
@@ -147,6 +149,7 @@ def main():
         sys.exit(0)
 
     if args.command == "schedule":
+        configure_logging()
         from .triggers.scheduler import CronSchedulerTrigger
 
         extra_vars = {}
@@ -176,6 +179,7 @@ def main():
         sys.exit(0)
 
     if args.command == "daemon":
+        configure_logging()
         from .triggers.manager import TriggerManager
 
         manager = TriggerManager(runner=runner)
