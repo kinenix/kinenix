@@ -20,6 +20,7 @@ from urllib.parse import urlparse
 
 import psutil
 import requests
+from kinenix.engine import outbox
 from kinenix.env import get_env
 
 logger = logging.getLogger("kinenix_worker.hub")
@@ -110,7 +111,10 @@ class HubClient:
             elif ok and self._last_ok is False:
                 logger.info(f"Heartbeat to Hub {self.url} recovered")
             self._last_ok = ok
-            return ok
+        if ok:
+            # Runs that could not reach the Hub go now, without waiting for the next run (#173)
+            outbox.send_pending(self.url, self._headers(), timeout=REQUEST_TIMEOUT)
+        return ok
 
     def set_task(self, task: Optional[str]) -> None:
         """Record the running flow (None when idle) and report it immediately."""

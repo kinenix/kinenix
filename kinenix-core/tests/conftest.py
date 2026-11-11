@@ -25,3 +25,10 @@ def chromium():
             pytest.fail(f"Chromium must be available in CI: {e}")
         pytest.skip(f"Chromium not available: {e}")
     return True
+
+
+@pytest.fixture(autouse=True)
+def _own_outbox(tmp_path, monkeypatch):
+    """Each test gets its own outbox for runs that did not reach the Hub, so one test's kept runs never reach another's mock."""
+    from kinenix.engine import outbox
+    monkeypatch.setattr(outbox, "outbox_dir", lambda: tmp_path / "outbox")
