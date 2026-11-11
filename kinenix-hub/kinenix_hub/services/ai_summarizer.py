@@ -16,7 +16,7 @@ CATEGORIES = {
     "UI Selector Not Found / DOM Changed": {
         "th_label": "หาปุ่มหรือ Element ไม่พบบนหน้าเว็บ (โครงสร้างเปลี่ยน)",
         "root_cause": "Selector หรือ XPath ไม่ตรงกับโครงสร้าง HTML ปัจจุบันของเว็บไซต์",
-        "suggestion": "ตรวจสอบ Selector ใน DevTools หรือใช้ ai_match: true ช่วยจับคู่แบบ Semantic"
+        "suggestion": "ตรวจสอบ Selector ใน DevTools กับหน้าเว็บปัจจุบัน หรือรอให้ Element ปรากฏด้วย web.wait_for ก่อนใช้งาน"
     },
     "Page Load / Network Timeout": {
         "th_label": "เครือข่ายขัดข้อง หรือหน้าเว็บโหลดช้าเกินกำหนด",

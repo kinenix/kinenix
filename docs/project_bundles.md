@@ -33,7 +33,7 @@ flows/
 - **No Hardcoded Absolute Paths:** Workflows never depend on developer-specific paths (e.g., `C:\Users\Dev\...`), ensuring seamless portability across different machines, VMs, or operating systems.
 - **Atomic Units:** A single project directory represents one coherent unit of business automation that can be developed, tested, versioned, and deployed as a standalone bundle.
 - **Decoupled Settings (`config.json`):** Engine automatically auto-loads `config.json` from the flow bundle directory into `${config.*}` and top-level variables. Business users or admins can modify endpoints, email recipients, or thresholds without altering `flow.json`.
-- **Local Secrets (`.env`):** Optional project-level `.env` is automatically parsed and mapped to `${env.*}` for local execution without leaking credentials to version control.
+- **Local Secrets (`.env`):** Optional project-level `.env` is automatically parsed and mapped to `${env.*}` for local execution without leaking credentials to version control. One `NAME=value` per line; `export NAME=value` works too, a line starting with `#` is a comment, and so is ` # note` after a value. Put a value that holds ` #` in quotes (`NOTE='room # 5'`); a `#` without a space before it stays in the value (`PASSWORD=abc#123`). A variable already set in the environment wins over the file.
 
 ---
 

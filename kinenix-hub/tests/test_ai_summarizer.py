@@ -64,3 +64,9 @@ def test_local_time_in_logs():
     expected = datetime(2026, 10, 15, 7, 6, 27, tzinfo=timezone.utc).astimezone()
     assert shown.startswith(f"{expected:%Y-%m-%d %H:%M:%S} ")
     assert hub_console._local_time(None) == "-" and hub_console._local_time("not a time") == "not a time"
+
+
+def test_rule_suggestions_name_only_parameters_that_exist():
+    """`ai_match` exists only on web.select_option, so a general selector hint must not suggest it (#171)."""
+    from kinenix_hub.services.ai_summarizer import CATEGORIES
+    assert not [name for name, rule in CATEGORIES.items() if "ai_match" in rule["suggestion"]]

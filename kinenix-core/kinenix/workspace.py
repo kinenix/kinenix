@@ -18,6 +18,8 @@ import subprocess  # nosec B404: runs only `git init` on the flows folder
 from pathlib import Path
 from typing import Callable, Dict, Mapping, Optional
 
+from .envfile import read_env_file
+
 ENV_VAR = "KINENIX_FLOWS_DIR"
 SETTING_KEY = "KINENIX_FLOWS_DIR"
 
@@ -32,14 +34,8 @@ def settings_file() -> Path:
 
 
 def _read_settings(path: Path) -> Dict[str, str]:
-    values: Dict[str, str] = {}
-    if path.is_file():
-        for line in path.read_text(encoding="utf-8-sig").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, value = line.split("=", 1)
-                values[key.strip()] = value.strip()
-    return values
+    # Written by Kinenix without quotes, and a saved path may hold " #", so no inline comments here
+    return read_env_file(path, inline_comments=False)
 
 
 def saved_settings() -> Dict[str, str]:

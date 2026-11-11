@@ -19,6 +19,7 @@ from .stopping import RunStopped, stop_requested
 from .stopping import wait as wait_or_stop
 from .. import __version__
 from ..actions.registry import ActionRegistry
+from ..envfile import read_env_file
 from ..actions.flow_control import SubflowExecutionError, is_business_error
 from ..models.context import ExecutionContext, StepResult, FailureDetails, local_now
 from ..models.flow import FlowDefinition, Step
@@ -946,18 +947,10 @@ class FlowInterpreter:
                 self.logger.logger.warning(f"Failed to load .env from {env_file}: {str(e)}")
 
     def _load_env_file(self, env_path: Path) -> None:
-        lines = env_path.read_text(encoding="utf-8-sig").splitlines()
-        for line in lines:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, v = line.split("=", 1)
-            k = k.strip()
-            v = v.strip().strip("'\"")
-            if k and k not in os.environ:
+        for k, v in read_env_file(env_path).items():
+            if k not in os.environ:
                 os.environ[k] = v
-            if k:
-                self.logger.redactor.add_env_file_value(k, v)
+            self.logger.redactor.add_env_file_value(k, v)
 
     def _resolve_subflow_path(self, flow_target: str, context: ExecutionContext) -> Path:
         return resolve_subflow_path(flow_target, context)
