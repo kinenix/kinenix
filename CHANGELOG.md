@@ -2,7 +2,9 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
-## Unreleased
+## 1.0.1 (2026-11-11)
+
+Fixes for 1.0.0, found in its soak on a Raspberry Pi and in the issues left from the release candidates. Nothing changes for flows. Upgrade all three packages together: kinenix-hub 1.0.1 needs kinenix 1.0.1.
 
 ### Added
 
