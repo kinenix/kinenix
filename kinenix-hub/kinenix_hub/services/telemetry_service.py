@@ -3,7 +3,7 @@ import json
 import logging
 import math
 from typing import Any, Dict, List, Optional
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from ..models import Execution, Worker
@@ -98,6 +98,9 @@ def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = 
     if stored:
         logger.info(f"Run {run_id} of {worker_id} is already stored; nothing changed")
         return stored
+    # End the transaction of that check: the failure analysis below may wait seconds for the central
+    # LLM, and a write session must not hold the database's write lock meanwhile (#201)
+    db.rollback()
 
     flow_name = payload.get("flow_name", "Unknown Flow")
     has_error = bool(payload.get("has_error", False))
@@ -171,12 +174,17 @@ def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = 
     db.commit()
     db.refresh(execution)
 
-    # Update worker's current task
-    worker = db.query(Worker).filter(Worker.id == worker_id).first()
-    if worker:
-        worker.current_task = None
-        worker.status = "online"
-        db.commit()
+    # Update worker's current task. The run is already stored, so a failure here must not answer
+    # the worker with an error that makes it think the run was lost
+    try:
+        worker = db.query(Worker).filter(Worker.id == worker_id).first()
+        if worker:
+            worker.current_task = None
+            worker.status = "online"
+            db.commit()
+    except OperationalError as e:
+        db.rollback()
+        logger.warning(f"Run {run_id} of {worker_id} is stored, but the worker's status was not updated: {e}")
 
     return execution
 
