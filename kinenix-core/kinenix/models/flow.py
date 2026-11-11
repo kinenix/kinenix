@@ -9,10 +9,11 @@ class VariableDefinition(BaseModel):
 
 
 class ErrorHandlerConfig(BaseModel):
-    on_error: str = Field(default="stop", description="After the last attempt: fail (or stop, retry), continue, or next_item (in a loop)")
+    on_error: str = Field(default="stop", description="After the last attempt: fail (or stop, retry), continue, ignore, or next_item (in a loop)")
     max_retries: Union[int, str] = Field(default=0, description="Retry attempts before on_error decides; a number or ${...}")
     retry_interval: Union[float, str] = Field(default=1.0, description="Seconds to wait between attempts; a number or ${...}")
     fallback_step_id: Optional[str] = Field(default=None, description="Step ID to jump to upon error")
+    error_message: Optional[str] = Field(default=None, description="Message of the step's failure instead of the action's; may use ${error.message}")
 
 
 class Step(BaseModel):

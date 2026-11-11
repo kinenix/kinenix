@@ -33,7 +33,7 @@ FAILURE_DETAILS_KEYS = ("v", "step_id", "section", "exception", "root_cause", "s
                         "line", "loop", "retries", "screenshot", "on_error")
 
 HANDLED_WORDS = {"stopped": "run stopped", "continued": "continued", "fallback": "fallback ran",
-                 "next_item": "went on with the next item"}
+                 "next_item": "went on with the next item", "ignored": "ignored"}
 SECTION_TITLES = {"on_error": "On Error", "finally": "Finally"}
 
 
@@ -293,8 +293,8 @@ def build_run_records(payload: Dict[str, Any], run: Dict[str, Any]) -> RunRecord
 def run_status(payload: Dict[str, Any]) -> str:
     """
     failed: the run stopped. partial: it finished, but work items or steps failed on the way (handled by
-    on_error: continue or next_item). success: nothing failed (#110). interrupted: it was stopped on request,
-    which is not a failure, whatever its Finally did (#166).
+    on_error: continue or next_item). success: nothing failed (#110); a step with on_error: ignore does not
+    count (#197). interrupted: it was stopped on request, which is not a failure, whatever its Finally did (#166).
     """
     if payload.get("interrupted"):
         return "interrupted"
@@ -304,7 +304,8 @@ def run_status(payload: Dict[str, Any]) -> str:
     if (_int(items.get("failed")) or 0) > 0:
         return "partial"
     steps = payload.get("step_results") or []
-    if any(isinstance(s, dict) and s.get("status") == "failed" for s in steps):
+    if any(isinstance(s, dict) and s.get("status") == "failed"
+           and (s.get("failure") or {}).get("handled") != "ignored" for s in steps):
         return "partial"
     return "success"
 

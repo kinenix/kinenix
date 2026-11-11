@@ -107,6 +107,12 @@ class ExecutionLogger:
             self.logger.info(
                 f"Completed Step [{result.step_id}] '{result.step_name}' in {result.duration_seconds:.3f}s"
             )
+        elif result.status == "failed" and (result.failure or {}).get("handled") == "ignored":
+            # on_error: ignore (#197): kept in the log, but not an error of the run
+            self.logger.warning(
+                f"Ignored failure of step [{result.step_id}] '{result.step_name}'{_in_section(result.section)}: "
+                f"{self.redactor.redact_text(result.error_message)}"
+            )
         elif result.status == "failed":
             self.logger.error(
                 f"Failed Step [{result.step_id}] '{result.step_name}'{_in_section(result.section)} - [{result.error_type} Error]: "

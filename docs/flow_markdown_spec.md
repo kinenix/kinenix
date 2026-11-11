@@ -273,6 +273,18 @@ Inside `${...}`, a value can also be calculated: counted, joined, cleaned, picke
 - **Not allowed:** method calls (`x.upper()`; use `upper(x)`), names starting with `_`, `**`, slices (`[1:3]`; use `substring`), lambdas, comprehensions, and any function not in the table. Expressions are limited to 500 characters.
 - **Errors stop the step** with the expression and the reason, for example `${lenn(rows)}: unknown function 'lenn'`. `kinenix validate` reports them before a run, with the line.
 
+**Turning labels into values with a table in `config.json`.** An index can be any expression, so a mapping in the config converts text to a value without a special function. On books.toscrape.com a rating is a CSS class such as `star-rating Three`:
+
+```json
+"ratings": {"One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5}
+```
+
+```markdown
+- **condition:** `${config.ratings[part(book.rating_class, ' ', 1)]} >= 3`
+```
+
+Changing the threshold is then one number. A label that is not in the table gives empty, and the comparison stops the step and says so.
+
 #### Lists, comparisons, and true/false values (Kinenix 1.1.0 and newer)
 
 After `web.get_list`, `web.get_table`, `excel.read`, or `csv.read`, sort, filter, count, and add up rows in one value instead of a loop, and set true/false or either-or values without `logic.if`. Add `> Requires: kinenix>=1.1.0` to a flow that uses them; `kinenix validate` says when. Design: [design/list-functions.md](design/list-functions.md).
@@ -329,7 +341,8 @@ Any step can retry and then decide what happens:
 | :--- | :--- |
 | not set, `fail`, or `stop` | The flow fails: the remaining steps are skipped and `## On Error` runs |
 | `retry` | Same as `fail`. Deprecated: removed in Kinenix 2.0; `kinenix validate` and every run warn. Delete the line, `max_retries` does the retrying |
-| `continue` | The failure is recorded and the flow goes on with the next step |
+| `continue` | The failure is recorded and the flow goes on with the next step. It counts as a failure: in a loop with `item_label` the item counts as failed, and the run ends as partial (exit code 8) |
+| `ignore` | For a step whose failure does not matter (Kinenix 1.1.0), such as closing a popup that is not always shown: the failure is kept in the log and the run record (`handled: ignored`), and the flow goes on with the next step, but it is not counted. The item counts as done, and the run can end with exit code 0 |
 | `next_item` | For a step inside a `logic.loop` (Kinenix 0.4.0b1): the failure is recorded, the rest of this item's sub-steps are skipped, and the loop goes on with its next item. The item counts as failed. Outside a loop it stops the flow like `fail`, and `kinenix validate` reports it |
 
 `continue` inside a loop goes on with the next sub-step of the same item, which suits an optional step such as a screenshot. To give up on an item, for example when `flow.fail` finds bad data, use `next_item`:
@@ -352,6 +365,32 @@ Any step can retry and then decide what happens:
 ```
 
 With nested loops, `next_item` ends the item of the innermost loop. In a subflow called for each item, set `next_item` on the `flow.call` step in the loop; the subflow's own steps are not inside that loop.
+
+For a step that may fail without it mattering, `ignore` keeps the run clean:
+
+```markdown
+> Requires: kinenix>=1.1.0
+
+  - Close Popup If Shown (`web.click`):
+    - **selector:** `.popup-close`
+    - **timeout:** 2000
+    - **on_error:** ignore
+```
+
+#### Your own message for a failure (Kinenix 1.1.0)
+
+`error_message` on any step replaces the action's message when the step fails, in the log, in `${error.message}`, in the run's failure, and on the Hub. `${error.message}` inside it is the action's own message, so it can be kept:
+
+```markdown
+> Requires: kinenix>=1.1.0
+
+### 1. Open The Shop (`web.open`)
+- **url:** ${config.shop_url}
+- **max_retries:** 2
+- **error_message:** เปิดเว็บไม่ได้: ${error.message}
+```
+
+It works with every `on_error` value; without `on_error` the flow stops with this message. It replaces the follow-up `flow.fail` step that a custom message needed before. If `error_message` itself cannot be evaluated, the action's message is kept and the log says why.
 
 **Where these keys go:** on the step that may fail. They have no effect on `logic.if`, `logic.loop`, or `flow.return`, and `kinenix validate` reports them there. Put them on the steps inside the block:
 

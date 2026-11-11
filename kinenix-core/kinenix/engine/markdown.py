@@ -34,7 +34,7 @@ _ALT_ELSE_STEPS_REGEX = re.compile(
 
 # Step keys that configure retry and failure behavior; they belong to Step.error_handler, not to the
 # action parameters, because the interpreter reads them from error_handler only
-ERROR_HANDLER_KEYS = ("on_error", "max_retries", "retry_interval", "fallback_step_id")
+ERROR_HANDLER_KEYS = ("on_error", "max_retries", "retry_interval", "fallback_step_id", "error_message")
 
 
 # `## On Error` and `## Finally` hold steps that run when Steps fail, and after everything (docs/flow_markdown_spec.md)

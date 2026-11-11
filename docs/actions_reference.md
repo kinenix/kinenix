@@ -984,9 +984,10 @@ Every step in Kinenix can define an optional `error_handler` strategy to make ex
 **Configuration Fields:**
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `on_error` | string | No | `"stop"` | What happens after the last attempt: `"fail"` or `"stop"` (the flow fails and `## On Error` runs), `"continue"` (record the failure and go on with the next step), `"next_item"` (inside a `logic.loop`: record the failure and go on with the next item, [flow_markdown_spec.md](flow_markdown_spec.md#31-retries-and-on_error-on-a-step)), or `"retry"` (same as `"fail"`; deprecated, removed in 2.0) |
+| `on_error` | string | No | `"stop"` | What happens after the last attempt: `"fail"` or `"stop"` (the flow fails and `## On Error` runs), `"continue"` (record the failure and go on with the next step; it counts as a failure), `"ignore"` (Kinenix 1.1.0: record the failure and go on, without counting it, for a step whose failure does not matter), `"next_item"` (inside a `logic.loop`: record the failure and go on with the next item, [flow_markdown_spec.md](flow_markdown_spec.md#31-retries-and-on_error-on-a-step)), or `"retry"` (same as `"fail"`; deprecated, removed in 2.0) |
 | `max_retries` | number or `${...}` | No | `0` | Extra attempts after the first failure, made before `on_error` decides (e.g. `3` = 1 attempt + 3 retries). Business errors (such as from `flow.fail`) are never retried |
 | `retry_interval` | number or `${...}` | No | `1.0` | Delay in seconds between attempts |
+| `error_message` | string or `${...}` | No | `null` | Kinenix 1.1.0: the message of the step's failure instead of the action's, in the log, `${error.message}`, and on the Hub. `${error.message}` inside it is the action's own message: `เปิดเว็บไม่ได้: ${error.message}` |
 | `fallback_step_id` | string | No | `null` | Deprecated, removed in 2.0: target step ID to execute as a recovery handler upon step failure. Use `on_error: continue` and a next step with a condition on `${error}`, or `## On Error` |
 
 In `flow.md`, write the fields as ordinary step keys. The compiler moves them into `error_handler`; they are not passed to the action. The JSON form `- **error_handler:** {"on_error": "continue", ...}` is also accepted.
