@@ -11,6 +11,7 @@ from ..env import get_env
 from ..models.context import ExecutionContext, StepResult
 from .markdown import SECTION_HEADINGS
 from .redaction import Redactor
+from . import outbox
 
 
 def resolve_log_dir(log_dir: Optional[Union[str, Path]] = None, flow_path: Optional[Path] = None) -> Path:
@@ -197,18 +198,28 @@ class ExecutionLogger:
             res = requests.post(target_endpoint, json=payload, headers=headers, timeout=TIMEOUT)
             if res.status_code == 200:
                 self.logger.info(f"Transmitted telemetry to Hub: {clean_url}")
-            elif res.status_code in (401, 403):
+                # The Hub answers again: send the runs that could not reach it before (#173)
+                outbox.send_pending(clean_url, headers, timeout=TIMEOUT)
+                return
+            # One warning per failed send; when the run is kept for later, the same warning says so
+            later = self._keep_for_later(payload) if outbox.worth_retrying(res.status_code) else ""
+            if res.status_code in (401, 403):
                 self.logger.warning(
                     f"Hub rejected telemetry (HTTP {res.status_code}). "
-                    "Check that KINENIX_HUB_API_KEY on this worker has the same value as on the Hub."
+                    f"Check that KINENIX_HUB_API_KEY on this worker has the same value as on the Hub.{later}"
                 )
             else:
-                self.logger.warning(f"Hub returned HTTP {res.status_code}: {res.text}")
+                self.logger.warning(f"Hub returned HTTP {res.status_code}: {res.text}{later}")
         except requests.RequestException as err:
             # Say why in plain words (name not found, Hub not running, firewall), as kinenix connect does
             from ..connect import describe_unreachable
-            self.logger.warning(f"The run was not sent to the Hub. {describe_unreachable(clean_url, err)} "
-                                f"The log is kept on this machine.")
+            later = self._keep_for_later(payload) or " The log is kept on this machine."
+            self.logger.warning(f"The run was not sent to the Hub. {describe_unreachable(clean_url, err)}{later}")
         except Exception as err:
             self.logger.warning(f"Telemetry transmission to Hub failed: {err}")
+
+    @staticmethod
+    def _keep_for_later(payload: dict) -> str:
+        """Put the run in the outbox (#173); the text to add to the warning, or "" when it could not be kept."""
+        return " The run is kept on this machine and sent when the Hub can be reached again." if outbox.keep(payload) else ""
 

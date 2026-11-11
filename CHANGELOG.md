@@ -2,6 +2,12 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+### Added
+
+- Runs that cannot reach the Hub are no longer lost from it (#173). A run whose telemetry fails because the Hub is down, restarting, busy, or refuses the key is kept in `~/.kinenix/outbox` and sent, oldest first, after the next run that reaches the Hub or with the worker's next heartbeat. The Hub stores a repeat once. At most 2,000 runs are kept; a run the Hub would never accept moves to `outbox/rejected`. In the 1.0.0rc2 soak, 85 of 119 runs never reached a Hub that was down for 20 hours ([docs/hub.md](docs/hub.md), section 8.3).
+
 ## 1.0.1 (2026-11-11)
 
 Fixes for 1.0.0, found in its soak on a Raspberry Pi and in the issues left from the release candidates. Nothing changes for flows. Upgrade all three packages together: kinenix-hub 1.0.1 needs kinenix 1.0.1.

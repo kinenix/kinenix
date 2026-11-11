@@ -108,3 +108,25 @@ def test_runner_failed_flow_returns_error_summary(tmp_path: Path):
     assert res["status"] == "failed"
     assert "Read Missing File" in res["error"]
     assert client.set_task.call_args_list[-1].args[0] is None
+
+
+def test_a_heartbeat_that_reaches_the_hub_sends_the_runs_waiting_in_the_outbox():
+    from kinenix.engine import outbox
+    outbox.keep({"worker_id": "w1", "payload": {"run_id": "kept-run", "flow_name": "Kept"}})
+    client = HubClient(url="http://orch:8080", api_key="k", worker_id="w1")
+    with patch("kinenix_worker.hub_client.requests.post", return_value=_response(200)) as mock_post:
+        assert client.send_heartbeat() is True
+    urls = [call.args[0] for call in mock_post.call_args_list]
+    assert urls == ["http://orch:8080/api/v1/heartbeat", "http://orch:8080/api/v1/telemetry"]
+    assert mock_post.call_args_list[1].kwargs["headers"] == {"X-API-Key": "k"}
+    assert outbox.pending() == []
+
+
+def test_a_failed_heartbeat_leaves_the_outbox_alone():
+    from kinenix.engine import outbox
+    outbox.keep({"worker_id": "w1", "payload": {"run_id": "kept-run"}})
+    client = HubClient(url="http://orch:8080", worker_id="w1")
+    with patch("kinenix_worker.hub_client.requests.post", side_effect=requests.ConnectionError("down")) as mock_post:
+        assert client.send_heartbeat() is False
+    assert mock_post.call_count == 1
+    assert len(outbox.pending()) == 1

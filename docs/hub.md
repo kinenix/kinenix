@@ -343,7 +343,16 @@ In this order, the first one set wins:
 
 `kinenix connect` without arguments shows which one is used and whether the Hub answers. A run with no Hub ends with `Hub: not connected` in its log.
 
-### 8.3 Symptoms
+### 8.3 Runs the Hub did not receive
+
+When a run cannot reach the Hub (it is down, restarting, busy, or refuses the key), its log ends with a warning that the run is kept on this machine. The run goes to the outbox, `~/.kinenix/outbox` (next to `kinenix.env`), and is sent, oldest first, as soon as the Hub answers again: after the next run that reaches it, or with the next heartbeat of `kinenix-worker`. The Hub stores one record for each run id of a worker, so a run sent twice is stored once.
+
+- At most 100 runs go in one send, and at most 2,000 are kept; beyond that the oldest are dropped with a warning (their log files stay on the machine).
+- A run the Hub answers with any other error, such as a malformed body, would fail again: it moves to `~/.kinenix/outbox/rejected` for a person to look at.
+- The files hold the same redacted data the Hub receives, readable only by their owner where the file system supports it. Deleting the folder gives up on the runs in it.
+- A run with no Hub set (`Hub: not connected`) is not kept.
+
+### 8.4 Symptoms
 
 | Symptom | Cause | Fix |
 | :--- | :--- | :--- |
