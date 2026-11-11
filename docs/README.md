@@ -10,6 +10,7 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [roadmap.md](roadmap.md) | Delivery status by phase and next priorities |
 | [benchmarks/flow_format.md](benchmarks/flow_format.md) | Benchmark: local AI models writing flows in `flow.md` vs YAML, and why Kinenix keeps `flow.md` |
 | [design/expressions.md](design/expressions.md) | Design of expressions in `${...}` and `and` / `or` / `not` in conditions (0.3.0b1) |
+| [design/list-functions.md](design/list-functions.md) | Design of sorting, filtering, totals, and comparisons in `${...}` (1.1.0) |
 | [design/agent-interface.md](design/agent-interface.md) | Design of the agent interface: exit codes, `--json`, tools, error codes, safety; foundation in 1.0.0, interface in 1.1.0 |
 | [design/threat-model.md](design/threat-model.md) | Threat model of core, worker, and Hub: what is protected, trust assumptions, threats with their milestone, review plan and findings |
 | [design/phase-2.md](design/phase-2.md) | Phase 2 design: On Error and Finally, subflow context, run records for AI questions, Hub tables and views, redaction (proposal) |

@@ -116,15 +116,13 @@ def test_lookups_that_work_today_are_unchanged(text, expected):
     ("${len(row.__class__)}", "names starting with _"),
     ("${__import__('os')}", "unknown function '__import__'"),
     ("${rows[0].upper()}", "not methods"),
-    ("${count > 1}", "comparisons belong in a condition"),
-    ("${count and 1}", None),                       # could be a key such as "Terms and Conditions"
     ("${lambda: 1}", None),                         # read as a missing key; nothing runs
     ("${[x for x in rows]}", "comprehensions are not allowed"),
     ("${2 ** 64}", "only + - * / %"),
     ("${f'{count}'}", None),                        # contains }, so ${...} ends early; nothing runs
     ("${len(rows, 2)}", "len takes 1 value, got 2"),
     ("${len(lambda: 1)}", "lambdas are not allowed"),
-    ("${len(count > 1)}", "comparisons belong in a condition"),
+    ("${len(count in rows)}", "for `in` use contains"),
     ("${join(sep=', ')}", "without names"),
     ("${rows[0:1]}", "slices"),
     ("${len(${ids})}", "without ${...}"),
@@ -155,6 +153,7 @@ def test_no_code_execution_in_the_evaluator():
 
 
 GRAMMAR = ["len(", "join(", "number(", "trim(", "part(", "substring(", "round(", "default(", "replace(",
+           "sort_by(", "where(", "sum(", "ifelse(", "text(", "contains(", "<", ">=", "!=", "or", "'-price'",
            "rows", "rows[0]", "ids", "count", "due", "row", ".id", ".price", "[", "]", "(", ")", ",", " ",
            "+", "-", "*", "/", "%", "'x'", '"-"', "1", "0", "-1", "3.5", "__class__", ".", "env", "lambda",
            "**", "==", "and", "not", "if", "else", ":", "{", "\\", "\0", "ราคา", chr(0x1F600), "\n"]  # chr(): no emoji in the source

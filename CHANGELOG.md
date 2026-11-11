@@ -6,6 +6,7 @@
 
 ### Added
 
+- **Lists and comparisons in `${...}`** (#142, #143, #144): `sort_by`, `where`, `column`, `sum`, `min`, `max`, `average`, `unique`, `first`, `last`, `contains`, `text`, and `ifelse`, and `==` `!=` `<` `<=` `>` `>=` `and` `or` `not` inside `${...}` with the rules of conditions. Sorting a list, counting rows that match, or setting a true/false column no longer takes a loop or a `logic.if`: `${sort_by(books, 'category', '-price')}`, `${len(where(books, 'price', '<', 20))}`, `${price < 20}`. A misspelled key is an error, not an empty list. A flow that uses them needs `> Requires: kinenix>=1.1.0`, and `kinenix validate` says so ([docs/flow_markdown_spec.md](docs/flow_markdown_spec.md), design in [docs/design/list-functions.md](docs/design/list-functions.md)).
 - Runs that cannot reach the Hub are no longer lost from it (#173). A run whose telemetry fails because the Hub is down, restarting, busy, or refuses the key is kept in `~/.kinenix/outbox` and sent, oldest first, after the next run that reaches the Hub or with the worker's next heartbeat. The Hub stores a repeat once. At most 2,000 runs are kept; a run the Hub would never accept moves to `outbox/rejected`. In the 1.0.0rc2 soak, 85 of 119 runs never reached a Hub that was down for 20 hours ([docs/hub.md](docs/hub.md), section 8.3).
 
 ## 1.0.1 (2026-11-11)

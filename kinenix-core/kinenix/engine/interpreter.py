@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .conditions import (ConditionError, compare_order, grouping_problem, is_order_operator, parse_boolean,
+from .conditions import (ConditionError, compare, grouping_problem, is_true, parse_boolean,
                          resolve_condition, values_equal)
 from .evaluator import VariableEvaluator
 from .logger import ExecutionLogger
@@ -1126,42 +1126,7 @@ class FlowInterpreter:
         self._record(context, result, step)
 
     def _evaluate_condition(self, left: Any, operator: str, right: Any) -> bool:
-        op = (operator or "equals").lower().strip()
-
-        if op in ["is_empty", "empty"]:
-            return left is None or str(left).strip() == ""
-        if op in ["is_not_empty", "not_empty"]:
-            return left is not None and str(left).strip() != ""
-
-        if is_order_operator(op):
-            return compare_order(left, op, right)
-
-        s_left = "" if left is None else str(left).strip()
-        s_right = "" if right is None else str(right).strip()
-
-        if op in ["equals", "==", "eq"]:
-            return values_equal(left, right)
-        if op in ["not_equals", "!=", "neq"]:
-            return not values_equal(left, right)
-        # `left in right` means left is part of right; a list on the other side is checked item by item
-        if op in ["in", "not_in"]:
-            if isinstance(right, (list, tuple, set)):
-                found = any(s_left.lower() == ("" if item is None else str(item).strip()).lower() for item in right)
-            else:
-                found = s_left.lower() in s_right.lower()
-            return found if op == "in" else not found
-        if op in ["contains", "not_contains"]:
-            if isinstance(left, (list, tuple, set)):
-                found = any(s_right.lower() == ("" if item is None else str(item).strip()).lower() for item in left)
-            else:
-                found = s_right.lower() in s_left.lower()
-            return found if op == "contains" else not found
-        if op in ["starts_with", "startswith"]:
-            return s_left.lower().startswith(s_right.lower())
-        if op in ["ends_with", "endswith"]:
-            return s_left.lower().endswith(s_right.lower())
-
-        return s_left == s_right
+        return compare(left, operator, right)
 
     def _condition_holds(self, expression: Any, variables: Dict[str, Any]) -> bool:
         """
@@ -1191,7 +1156,7 @@ class FlowInterpreter:
     def _comparison_holds(self, expression: str, variables: Dict[str, Any]) -> bool:
         left, operator, right = resolve_condition(expression, variables)
         if operator is None:
-            return left if isinstance(left, bool) else str(left).strip().lower() in ["true", "1", "yes"]
+            return is_true(left)
         try:
             return self._evaluate_condition(left, operator, right)
         except ConditionError as e:
