@@ -199,7 +199,13 @@ A scheduler runs either every `interval_seconds` or, when `cron` is set, at the 
 | `*/15 * * * *` | Every 15 minutes |
 | `0 9 1,15 * *` | 09:00 on the 1st and 15th |
 
-An invalid expression stops the daemon at startup with the field that is wrong. Check the Pi's time zone with `timedatectl` (set it with `sudo timedatectl set-timezone Asia/Bangkok`).
+An invalid expression stops the daemon at startup with the field that is wrong.
+
+A scheduler with `interval_seconds` runs once as soon as the daemon starts, then every interval, so every restart runs it again. Add `"run_at_start": false` to wait one interval before its first run; for a fixed time of day, use `cron` instead:
+
+```json
+{ "type": "scheduler", "flow": "cleanup", "interval_seconds": 21600, "run_at_start": false }
+``` Check the Pi's time zone with `timedatectl` (set it with `sudo timedatectl set-timezone Asia/Bangkok`).
 
 | Task | Command |
 | :--- | :--- |

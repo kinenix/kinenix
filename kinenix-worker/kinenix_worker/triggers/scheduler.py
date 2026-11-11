@@ -23,7 +23,8 @@ class CronSchedulerTrigger:
         extra_vars: Optional[Dict[str, Any]] = None,
         runner: Optional[WorkerRunner] = None,
         callback: Optional[Callable[[Dict[str, Any]], None]] = None,
-        cron: Optional[str] = None
+        cron: Optional[str] = None,
+        run_at_start: bool = True
     ):
         self.flow_path = flow_path
         self.interval_seconds = max(0.1, float(interval_seconds))
@@ -35,6 +36,10 @@ class CronSchedulerTrigger:
         self.cron = CronExpression(cron) if cron else None
 
         self.last_run_time: Optional[datetime] = None
+        # An interval trigger runs once when the daemon starts, then every interval. With
+        # run_at_start false, the first run waits one interval, so a restart does not run it again (#171)
+        self.run_at_start = bool(run_at_start)
+        self._started_at: Optional[datetime] = None
 
     def describe(self) -> str:
         return f"cron '{self.cron}'" if self.cron else f"every {self.interval_seconds}s"
@@ -47,7 +52,11 @@ class CronSchedulerTrigger:
                 self.last_run_time.replace(second=0, microsecond=0) == current.replace(second=0, microsecond=0)
             return self.cron.matches(current) and not already_ran
         if self.last_run_time is None:
-            return True
+            if self.run_at_start:
+                return True
+            if self._started_at is None:
+                self._started_at = current
+            return (current - self._started_at).total_seconds() >= self.interval_seconds
         elapsed = (current - self.last_run_time).total_seconds()
         return elapsed >= self.interval_seconds
 

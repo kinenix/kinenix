@@ -4,9 +4,15 @@
 
 ## Unreleased
 
+### Added
+
+- `"run_at_start": false` on an interval scheduler in `triggers.json` waits one interval before the first run, so restarting the worker does not run the flow again (#171). Without it, an interval scheduler still runs once when the daemon starts.
+
 ### Fixed
 
 - The Hub answered HTTP 500 "database is locked" now and then when a heartbeat and a run from the same worker arrived together, so the worker reported a failed send for a run that was stored (#201). Writes to a SQLite `hub.db` now take the write lock at their start and wait for each other, the failure analysis no longer holds the lock while the central LLM answers, and a failed update of the worker's status after a run is stored is logged instead of answered with an error.
+- A bundle's `.env` read `export NAME=value` as a variable named `export NAME`, and kept ` # note` after a value as part of it (#171). One reader now handles `.env` and the settings files in `~/.kinenix`: `export` is accepted, a value in quotes is taken as written, and in `.env` a `#` after a space or tab starts a comment.
+- The Hub suggested `ai_match: true` for any selector that was not found, but only `web.select_option` accepts it (#171).
 
 ## 1.0.0 (2026-11-10)
 
