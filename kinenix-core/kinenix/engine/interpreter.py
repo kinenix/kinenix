@@ -13,6 +13,7 @@ from .evaluator import VariableEvaluator
 from .logger import ExecutionLogger
 from .markdown import JSON_FLOW_NOT_RUN, SECTION_HEADINGS, markdown_to_flow
 from .redaction import NOT_SECRET_ENV, Redactor
+from .action_errors import explain as explain_action_error
 from .web_errors import explain as explain_web_error
 from .requires import requirement_problem
 from .stopping import RunStopped, stop_requested
@@ -263,6 +264,7 @@ class FlowInterpreter:
         exc_class = type(exc).__name__
         err_msg = str(exc)
         error_type = "Business" if is_business_error(exc) else "Technical"
+        where = f" (line {step.line})" if step.line else ""
 
         error_screenshot_path = None
         child = getattr(exc, "child_context", None)
@@ -286,13 +288,18 @@ class FlowInterpreter:
                 suggested_fix = child_details.suggested_fix or ""
             else:
                 root_cause = f"Subflow execution failed in '{exc.subflow_name}': {err_msg}"
-                suggested_fix = f"Inspect child subflow '{exc.subflow_name}' definition and input parameters passed in step '{step.id}'."
+                suggested_fix = (f"Read the subflow's own steps in the run log, and check the inputs that step "
+                                 f"'{step.name}'{where} passes to '{exc.subflow_name}'.")
+        elif explain_action_error(err_msg, step.name) is not None:
+            # Kinenix's own action messages: the value, the options, the file, the HTTP status (#219)
+            root_cause, suggested_fix = explain_action_error(err_msg, step.name)
         elif explain_web_error(err_msg) is not None:
             # Known Playwright patterns: what blocked the click, what was not found, why the site failed (#111)
             root_cause, suggested_fix = explain_web_error(err_msg)
         elif isinstance(exc, FileNotFoundError) or ("not found" in err_msg.lower() and "file" in err_msg.lower()):
-            root_cause = f"Required file was not found during execution of step '{step.name}'."
-            suggested_fix = "Verify the target file path exists and that relative paths are correctly anchored to the flow project directory."
+            root_cause = f"A file or folder that step '{step.name}' needs was not found: {err_msg}"
+            suggested_fix = ("Check the path. A relative path is read from the flow's folder; when an earlier step "
+                             "makes the file, check that it ran and wrote it there.")
         elif "timeout" in err_msg.lower() or "waiting for" in err_msg.lower():
             root_cause = f"Operation timed out waiting for element or network response in step '{step.name}' (Action: {step.action})."
             suggested_fix = "Verify target web page/API is reachable, inspect selector validity, or increase action timeout parameter."
@@ -304,7 +311,10 @@ class FlowInterpreter:
             suggested_fix = "Ensure preceding steps initialize this variable or verify variable expression spelling."
         else:
             root_cause = f"{exc_class} in step '{step.name}' ({step.action}): {err_msg}"
-            suggested_fix = f"Inspect input parameters to step '{step.id}' ({step.action}) and verify prerequisite conditions."
+            # No rule knows this message: point at the step by the name and line a person sees in flow.md (#219)
+            suggested_fix = (f"Read the error message, then check the parameters of step '{step.name}'{where} "
+                             f"and the values of the variables they use; the screenshot shows the page when "
+                             f"there is one.")
 
         return FailureDetails(
             failed_step_id=step.id,

@@ -171,7 +171,7 @@ Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0
 
 ### 1.1.0: Flow data tools
 
-**Goal:** fix what real flows written by AI assistants ran into after the release candidates: sorting, filtering, and totals on lists (#142, #143); shorter conditions (#144); loops that stop early and paging with per-page error tolerance (#191, #192); text-to-value lookups (#194); a custom error message on any step (#193) and `on_error: ignore` for steps whose failure does not matter (#197); clearer business errors on web lists (#146); template guidance (#150) and a validate hint for loops (#151); `kinenix-worker service install` after `pip install` (#153); worker logs of its triggers (#156); and `> Requires:` detection for features newer than 0.4.0b1 (#198).
+**Goal:** fix what real flows written by AI assistants ran into after the release candidates: sorting, filtering, and totals on lists (#142, #143); shorter conditions (#144); loops that stop early and paging with per-page error tolerance (#191, #192); text-to-value lookups (#194); a custom error message on any step (#193) and `on_error: ignore` for steps whose failure does not matter (#197); clearer business errors on web lists (#146); plain causes and fixes for the errors of Kinenix's own actions (#219); template guidance (#150) and a validate hint for loops (#151); `kinenix-worker service install` after `pip install` (#153); worker logs of its triggers (#156); and `> Requires:` detection for features newer than 0.4.0b1 (#198).
 
 **Compatibility:** additions only; nothing promised in 1.0.0 changes.
 
