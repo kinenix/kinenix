@@ -27,7 +27,9 @@ WAIT = "# Hub Test\n\n## Steps\n\n### 1. Wait (`logic.delay`)\n- **seconds:** 0\
 
 def _cli(tmp_path, *args, **env):
     return subprocess.run([sys.executable, "-m", "kinenix.cli", *args], cwd=tmp_path,
-                          env={**os.environ, "KINENIX_FLOWS_DIR": str(tmp_path), **env},
+                          env={**os.environ, "KINENIX_FLOWS_DIR": str(tmp_path),
+                               # Runs kept for the Hub (#173) stay in this test's folder
+                               "KINENIX_SETTINGS_FILE": str(tmp_path / "settings" / "kinenix.env"), **env},
                           capture_output=True, text=True, timeout=120)
 
 
@@ -82,12 +84,15 @@ def test_a_hub_that_is_down_does_not_stop_the_run(tmp_path):
     (tmp_path / "ok").mkdir()
     (tmp_path / "ok" / "flow.md").write_text(WAIT, encoding="utf-8")
     result = _cli(tmp_path, "run", "ok", "--log-dir", str(tmp_path / "logs"),
-                  KINENIX_HUB_URL=f"http://127.0.0.1:{_free_port()}")
+                  KINENIX_HUB_URL=f"http://127.0.0.1:{_free_port()}",
+                  KINENIX_SETTINGS_FILE=str(tmp_path / "settings" / "kinenix.env"))
     assert result.returncode == exit_codes.OK, result.stderr
     assert list((tmp_path / "logs").rglob("*_success.json"))
     output = result.stdout + result.stderr
     assert output.count("The run was not sent to the Hub") == 1
-    assert "The log is kept on this machine" in output
+    # Kept in the outbox and sent when the Hub is back (#173)
+    assert "The run is kept on this machine and sent when the Hub can be reached again" in output
+    assert len(list((tmp_path / "settings" / "outbox").glob("*.json"))) == 1
 
 
 def test_a_slow_hub_is_given_up_on_and_the_log_is_kept(tmp_path, caplog):

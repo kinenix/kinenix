@@ -10,11 +10,11 @@ How an AI assistant builds a flow:
 4. Run `kinenix actions` for the exact parameters of every action; do not guess parameter names.
 5. Run `kinenix validate .` and fix every problem, then `kinenix run .` and read the log.
 
-Expressions in `${...}` are a fixed, safe set of functions (no code runs). Business data stays local: do not send page content or flow data to cloud services unless the task asks for it.
+Expressions in `${...}` are a fixed, safe set of functions (no code runs); from Kinenix 1.1.0 they also sort, filter, and add up lists (`sort_by`, `where`, `sum`) and compare values (`${price < 20}`, `ifelse`), so a flow needs no loop for that. Business data stays local: do not send page content or flow data to cloud services unless the task asks for it.
 
 ## Build flows
 
-- [Flow Markdown specification](https://www.kinenix.com/flow_markdown_spec/): the `flow.md` format: steps, parameters, loops, conditions, expressions, `on_error` (`continue`, `next_item`), `## On Error` and `## Finally`, `${error}` and `${run}`
+- [Flow Markdown specification](https://www.kinenix.com/flow_markdown_spec/): the `flow.md` format: steps, parameters, loops, conditions, expressions and list functions, `on_error` (`continue`, `next_item`), `## On Error` and `## Finally`, `${error}` and `${run}`
 - [Actions reference](https://www.kinenix.com/actions_reference/): every action (web, Excel and CSV, files, logic, dates, HTTP, subflows, e-mail, local AI) with its parameters and a `flow.md` example
 - [Project bundles](https://www.kinenix.com/project_bundles/): the project folder, `config.json`, `.env`, subflows with `flow.call`, and testing a flow against saved pages with `kinenix run --config`
 - [CLI guide](https://www.kinenix.com/cli_guide/): `kinenix init`, `run`, `validate`, `actions`, `list`, and their options

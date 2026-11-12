@@ -153,6 +153,8 @@ For actions that contain nested steps, use standard Markdown 2-space or 4-space 
     - **param2:** value
 ```
 
+From Kinenix 1.1.0, `- **times:** 10` (a number or `${...}`) repeats the sub-steps that many times instead of going through `items`; `item_var` then holds 1, 2, 3, ... A `logic.next` step skips the rest of the current item and goes on with the next one (the item counts as done), and a `logic.break` step leaves the innermost loop of its flow; both usually stand behind a `condition`, so "read page after page until there is no next page" is a `times` loop as a limit and a `logic.break` where it should end ([actions_reference.md](actions_reference.md#logicbreak)). Running out of `times` is not an error, and items not reached because of a break are not counted.
+
 #### B. Condition Syntax (`logic.if`)
 ```markdown
 ### [Step Name] (`logic.if`)
@@ -269,9 +271,55 @@ Inside `${...}`, a value can also be calculated: counted, joined, cleaned, picke
 - **Arithmetic needs numbers.** Text that is a plain number (`"12"`, `"3.5"`, as read from CSV) counts as a number; other text is an error that suggests `number(...)`. A whole result is written without `.0`.
 - **Missing values are empty**, as for variables: a missing key or an index past the end gives empty, and the functions treat empty as listed above.
 - **A variable that exists is always read as before.** `${row.First Name}` and `${row.Role in Company}` are keys of `row`, not expressions. Text is evaluated as an expression only when it names no existing variable.
-- **Comparisons and `and` / `or` / `not` belong in conditions**, not inside `${...}`: write `${count} > 3`, not `${count > 3}`.
+- **Comparisons and `and` / `or` / `not`** work inside `${...}` from Kinenix 1.1.0, with the rules of conditions; see [Lists, comparisons, and true/false values](#lists-comparisons-and-truefalse-values-kinenix-110-and-newer). On older versions write them in a condition: `${count} > 3`.
 - **Not allowed:** method calls (`x.upper()`; use `upper(x)`), names starting with `_`, `**`, slices (`[1:3]`; use `substring`), lambdas, comprehensions, and any function not in the table. Expressions are limited to 500 characters.
 - **Errors stop the step** with the expression and the reason, for example `${lenn(rows)}: unknown function 'lenn'`. `kinenix validate` reports them before a run, with the line.
+
+**Turning labels into values with a table in `config.json`.** An index can be any expression, so a mapping in the config converts text to a value without a special function. On books.toscrape.com a rating is a CSS class such as `star-rating Three`:
+
+```json
+"ratings": {"One": 1, "Two": 2, "Three": 3, "Four": 4, "Five": 5}
+```
+
+```markdown
+- **condition:** `${config.ratings[part(book.rating_class, ' ', 1)]} >= 3`
+```
+
+Changing the threshold is then one number. A label that is not in the table gives empty, and the comparison stops the step and says so.
+
+#### Lists, comparisons, and true/false values (Kinenix 1.1.0 and newer)
+
+After `web.get_list`, `web.get_table`, `excel.read`, or `csv.read`, sort, filter, count, and add up rows in one value instead of a loop, and set true/false or either-or values without `logic.if`. Add `> Requires: kinenix>=1.1.0` to a flow that uses them; `kinenix validate` says when. Design: [design/list-functions.md](design/list-functions.md).
+
+```markdown
+- **value:** ${sort_by(books, 'category', '-price')}
+- **value:** ${len(where(books, 'price', '<', config.cheap_limit))} cheap books, ${sum(books, 'price')} THB in total
+- **value:** {"title": "${book.title}", "cheap": "${price < config.cheap_limit}", "in_stock": "${contains(book.availability, 'In stock')}"}
+```
+
+| Function | Result | Example |
+| :--- | :--- | :--- |
+| `sort_by(list, key, ...)` | A new list sorted by one or more keys, low to high; `-key` sorts that key high to low. Numbers (also text such as `"1,200"` or `"£12.00"`) sort as numbers, text without case; empty values always come last; equal rows keep their order | `${sort_by(rows, 'category', '-price')}` |
+| `where(list, key, operator, value)` | A new list of the rows whose `key` compares to `value`. Operators: `==` `!=` `<` `<=` `>` `>=` `contains` `not contains` `in` `not in` `starts with` `ends with` `is empty` `is not empty` (the last two take no value). With `<` `<=` `>` `>=`, a row whose value is empty is left out. For two conditions that must both hold, put one `where` inside another | `${where(rows, 'status', '==', 'Paid')}` |
+| `column(list, key)` | The values of one key, in order | `${join(column(rows, 'id'), ', ')}` |
+| `sum(list)`, `sum(list, key)` | The total; empty values do not count, other text that is not a number stops the step | `${sum(rows, 'amount')}` |
+| `min`, `max`, `average` | Smallest, largest, mean; same arguments as `sum`; empty for an empty list | `${max(rows, 'price')}` |
+| `unique(list)`, `unique(list, key)` | Each value once, in the order first seen; with a key, the first row for each value | `${column(unique(rows, 'category'), 'category')}` |
+| `first(list)`, `last(list)` | The first or last item; empty for an empty list | `${first(rows).id}` |
+| `contains(x, part)` | `true` when the text holds `part` (without case) or the list holds the value | `${contains(row.note, 'urgent')}` |
+| `text(x)` | The value as text, so `==` and `!=` compare it as text: `text(a.code) == text(b.code)` keeps `0012` apart from `12` | `${text(row.branch) == text(other.branch)}` |
+| `ifelse(test, a, b)` | `a` when `test` is true, else `b`; only the chosen one is evaluated | `${ifelse(row.qty > 0, 'In stock', 'Sold out')}` |
+
+| Form | Example | Result |
+| :--- | :--- | :--- |
+| Comparison: `==` `!=` `<` `<=` `>` `>=` | `${price < config.cheap_limit}`, `${1 < x <= 10}` | `true` or `false` |
+| `and`, `or`, `not`, with parentheses | `${(in_stock or preorder) and price < 20}` | `true` or `false` |
+
+- **The rules of conditions.** Two values that look like numbers compare as numbers (`100 == 100.00`, `"1,200" == 1200`); anything else compares as text, without case. Text in quotes, or passed through `text(...)`, compares as text: `${branch == '0012'}` does not match `12`. `<` `<=` `>` `>=` need numbers on both sides; an empty or non-number side stops the step (exit code 4) and says which value.
+- **A misspelled key is an error**, not an empty list: `where: no row has the key 'prcie'; keys: category, price, title`.
+- **Functions never change the list they get**; they return a new one. Lists of up to 100,000 items.
+- **`in` is not a comparison inside `${...}`**, so `${row.Role in Company}` stays a key as before; use `contains(list, value)` or `where(..., 'in', list)`.
+- A missing key with `and`, `or`, or `not` in its name, such as `${row.Terms and Conditions}`, is still empty, as before.
 
 ---
 
@@ -295,7 +343,8 @@ Any step can retry and then decide what happens:
 | :--- | :--- |
 | not set, `fail`, or `stop` | The flow fails: the remaining steps are skipped and `## On Error` runs |
 | `retry` | Same as `fail`. Deprecated: removed in Kinenix 2.0; `kinenix validate` and every run warn. Delete the line, `max_retries` does the retrying |
-| `continue` | The failure is recorded and the flow goes on with the next step |
+| `continue` | The failure is recorded and the flow goes on with the next step. It counts as a failure: in a loop with `item_label` the item counts as failed, and the run ends as partial (exit code 8) |
+| `ignore` | For a step whose failure does not matter (Kinenix 1.1.0), such as closing a popup that is not always shown: the failure is kept in the log and the run record (`handled: ignored`), and the flow goes on with the next step, but it is not counted. The item counts as done, and the run can end with exit code 0 |
 | `next_item` | For a step inside a `logic.loop` (Kinenix 0.4.0b1): the failure is recorded, the rest of this item's sub-steps are skipped, and the loop goes on with its next item. The item counts as failed. Outside a loop it stops the flow like `fail`, and `kinenix validate` reports it |
 
 `continue` inside a loop goes on with the next sub-step of the same item, which suits an optional step such as a screenshot. To give up on an item, for example when `flow.fail` finds bad data, use `next_item`:
@@ -318,6 +367,32 @@ Any step can retry and then decide what happens:
 ```
 
 With nested loops, `next_item` ends the item of the innermost loop. In a subflow called for each item, set `next_item` on the `flow.call` step in the loop; the subflow's own steps are not inside that loop.
+
+For a step that may fail without it mattering, `ignore` keeps the run clean:
+
+```markdown
+> Requires: kinenix>=1.1.0
+
+  - Close Popup If Shown (`web.click`):
+    - **selector:** `.popup-close`
+    - **timeout:** 2000
+    - **on_error:** ignore
+```
+
+#### Your own message for a failure (Kinenix 1.1.0)
+
+`error_message` on any step replaces the action's message when the step fails, in the log, in `${error.message}`, in the run's failure, and on the Hub. `${error.message}` inside it is the action's own message, so it can be kept:
+
+```markdown
+> Requires: kinenix>=1.1.0
+
+### 1. Open The Shop (`web.open`)
+- **url:** ${config.shop_url}
+- **max_retries:** 2
+- **error_message:** เปิดเว็บไม่ได้: ${error.message}
+```
+
+It works with every `on_error` value; without `on_error` the flow stops with this message. It replaces the follow-up `flow.fail` step that a custom message needed before. If `error_message` itself cannot be evaluated, the action's message is kept and the log says why.
 
 **Where these keys go:** on the step that may fail. They have no effect on `logic.if`, `logic.loop`, or `flow.return`, and `kinenix validate` reports them there. Put them on the steps inside the block:
 

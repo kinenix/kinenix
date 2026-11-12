@@ -4,7 +4,7 @@
       "properties": {
         "on_error": {
           "default": "stop",
-          "description": "After the last attempt: fail (or stop, retry) or continue",
+          "description": "After the last attempt: fail (or stop, retry), continue, ignore, or next_item (in a loop)",
           "title": "On Error",
           "type": "string"
         },
@@ -46,6 +46,19 @@
           "default": null,
           "description": "Step ID to jump to upon error",
           "title": "Fallback Step Id"
+        },
+        "error_message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Message of the step's failure instead of the action's; may use ${error.message}",
+          "title": "Error Message"
         }
       },
       "title": "ErrorHandlerConfig",

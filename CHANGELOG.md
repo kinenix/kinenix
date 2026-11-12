@@ -2,6 +2,19 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## 1.1.0rc1 (2026-11-12)
+
+First release candidate of 1.1.0, for trying the new list functions, loop control, and `on_item_error` on real flows. Nothing promised in 1.0.0 changes. A flow that uses these features needs `> Requires: kinenix>=1.1.0rc1` while it is tested on this release candidate (`kinenix>=1.1.0` would refuse it, because 1.1.0rc1 comes before 1.1.0). Still to come in 1.1.0: #146, #150, #151, #153, #162, and #198.
+
+### Added
+
+- **`on_item_error: skip` on `web.get_list` and `web.get_table`** (#192): an item with an empty `required_fields` field, or a `numeric_fields` / `numeric_columns` value that is not a number, is left out instead of failing the step and losing every page read so far. One warning says how many items were left out and why, without their content; `min_rows` counts the items kept. A page that does not load still fails the step; the page-by-page loop with `times` and `logic.break` covers going on after one.
+- **`logic.break`, `logic.next`, and loops with `times`** (#191): `logic.break`, with a `condition`, leaves the innermost loop of its flow; `logic.next` skips the rest of the current item, which counts as done; and `times: N` on `logic.loop` repeats its sub-steps without a list. A page-by-page loop no longer needs a made-up list in `config.json` or a flag checked by `logic.if` around every step, and pages it does not reach are not counted as work items or logged as skipped steps. Running out of `times` is not an error ([docs/design/loop-control.md](docs/design/loop-control.md)).
+- **`on_error: ignore`** (#197) for a step whose failure does not matter, such as closing a popup that is not always shown. The failure stays in the log and the run record with `handled: ignored`, but the item counts as done and the run is not partial, so it can end with exit code 0. `on_error: continue` keeps counting the failure.
+- **`error_message` on any step** (#193) replaces the action's message when the step fails, in the log, `${error.message}`, and on the Hub; `${error.message}` inside it is the action's own message: `- **error_message:** เปิดเว็บไม่ได้: ${error.message}`. A custom message no longer needs `on_error: continue` and a `flow.fail` step.
+- **Lists and comparisons in `${...}`** (#142, #143, #144): `sort_by`, `where`, `column`, `sum`, `min`, `max`, `average`, `unique`, `first`, `last`, `contains`, `text`, and `ifelse`, and `==` `!=` `<` `<=` `>` `>=` `and` `or` `not` inside `${...}` with the rules of conditions. Sorting a list, counting rows that match, or setting a true/false column no longer takes a loop or a `logic.if`: `${sort_by(books, 'category', '-price')}`, `${len(where(books, 'price', '<', 20))}`, `${price < 20}`. A misspelled key is an error, not an empty list. A flow that uses them needs `> Requires: kinenix>=1.1.0`, and `kinenix validate` says so ([docs/flow_markdown_spec.md](docs/flow_markdown_spec.md), design in [docs/design/list-functions.md](docs/design/list-functions.md)).
+- Runs that cannot reach the Hub are no longer lost from it (#173). A run whose telemetry fails because the Hub is down, restarting, busy, or refuses the key is kept in `~/.kinenix/outbox` and sent, oldest first, after the next run that reaches the Hub or with the worker's next heartbeat. The Hub stores a repeat once. At most 2,000 runs are kept; a run the Hub would never accept moves to `outbox/rejected`. In the 1.0.0rc2 soak, 85 of 119 runs never reached a Hub that was down for 20 hours ([docs/hub.md](docs/hub.md), section 8.3).
+
 ## 1.0.1 (2026-11-11)
 
 Fixes for 1.0.0, found in its soak on a Raspberry Pi and in the issues left from the release candidates. Nothing changes for flows. Upgrade all three packages together: kinenix-hub 1.0.1 needs kinenix 1.0.1.

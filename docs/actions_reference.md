@@ -50,6 +50,8 @@ This document specifies the standard actions available in Kinenix. Each action l
    - [logic.delay](#logicdelay)
    - [logic.if](#logicif)
    - [logic.loop](#logicloop)
+   - [logic.break](#logicbreak)
+   - [logic.next](#logicnext)
    - [logic.append](#logicappend)
 5. [Dates (`date.*`)](#dates-date)
    - [date.calc](#datecalc)
@@ -227,6 +229,7 @@ Reads an HTML `<table>` into a list of rows, one dictionary per row keyed by the
 | `numeric_columns` | list | No | `[]` | Columns (after renaming) converted to numbers; thousands separators are removed, and blank or `-` cells become empty. Text that is not a number fails the step |
 | `add_columns` | dict | No | `{}` | Fixed values added as the first columns of every row, for example the currency a table belongs to |
 | `min_rows` | number | No | `0` | Fail the step when fewer rows are found, so an empty result stops the flow instead of producing an empty report |
+| `on_item_error` | string | No | `fail` | Kinenix 1.1.0. `skip` leaves out a row whose `numeric_columns` value is not a number, instead of failing the step; one warning in the log says how many rows were left out and why. `min_rows` counts the rows that are kept |
 | `timeout` | number | No | `30000` | Milliseconds to wait for the table to exist, and for the content to change after each `next_selector` click |
 | `next_selector` | string | No | - | The "next page" button or link of a paged table (Kinenix 0.4.0b1). It is clicked until it is gone or disabled (`disabled`, `aria-disabled="true"`, or a `disabled` class on it or its parents, as in DataTables and Bootstrap), and the rows of every page are returned in order. Each click waits until the content has changed |
 | `max_pages` | number | No | `20` | The most pages read with `next_selector`. More pages than this fails the step instead of leaving pages out without notice |
@@ -266,7 +269,8 @@ Reads repeated elements, such as product cards or search results, into a list of
 | `numeric_fields` | list | No | `[]` | Fields converted to numbers, the way `number()` reads them in expressions: the first number in the text, so `"15,434.75 บาท/ปี"` is `15434.75`. Blank and `-` become empty; text with no number fails the step |
 | `required_fields` | list | No | `[]` | Fields that must not be empty; an element without one fails the step, naming the element and what it reads |
 | `add_columns` | dict | No | `{}` | Fixed values added as the first columns of every row, for example the request the results belong to |
-| `min_rows` | number | No | `0` | Fail the step when fewer elements are found |
+| `min_rows` | number | No | `0` | Fail the step when fewer elements are found; with `on_item_error: skip`, only the items kept count |
+| `on_item_error` | string | No | `fail` | Kinenix 1.1.0. `skip` leaves out an item that has an empty `required_fields` field or a `numeric_fields` field with no number, instead of failing the step and losing every page read so far. One warning in the log says how many items were left out and why (`skipped 2 of 40 item(s): item 14 has no 'title'; ...`), without their content |
 | `timeout` | number | No | `30000` | Milliseconds to wait for the first element, and for the content to change after each `next_selector` click |
 | `next_selector` | string | No | - | The "next page" or "more" control, as in `web.get_table`; the rows of every page are returned in order |
 | `max_pages` | number | No | `20` | The most pages read with `next_selector`; more fails the step |
@@ -284,6 +288,23 @@ Reads repeated elements, such as product cards or search results, into a list of
 ```
 
 Returns, for example: `[{"request_id": "R001", "name": "Class 1 Plus", "premium": 15434.75, "details": "/packages/123"}, ...]`.
+
+**Example: every page, leaving out books that cannot be read (Kinenix 1.1.0):**
+```markdown
+> Requires: kinenix>=1.1.0
+
+### 3. Read All Books (`web.get_list`)
+- **output_var:** `books`
+- **selector:** `article.product_pod`
+- **fields:** {"title": "h3 a@title", "price": ".price_color", "rating_class": "p.star-rating@class"}
+- **numeric_fields:** ["price"]
+- **required_fields:** ["title"]
+- **next_selector:** `li.next a`
+- **max_pages:** 50
+- **on_item_error:** skip
+```
+
+A page that does not load still fails the step. To go on after a page that fails, loop over the pages yourself with `logic.loop` and `times`, `on_error: next_item` on the read, and `logic.break` when there is no next page ([logic.loop](#logicloop)).
 
 ---
 
@@ -984,9 +1005,10 @@ Every step in Kinenix can define an optional `error_handler` strategy to make ex
 **Configuration Fields:**
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `on_error` | string | No | `"stop"` | What happens after the last attempt: `"fail"` or `"stop"` (the flow fails and `## On Error` runs), `"continue"` (record the failure and go on with the next step), `"next_item"` (inside a `logic.loop`: record the failure and go on with the next item, [flow_markdown_spec.md](flow_markdown_spec.md#31-retries-and-on_error-on-a-step)), or `"retry"` (same as `"fail"`; deprecated, removed in 2.0) |
+| `on_error` | string | No | `"stop"` | What happens after the last attempt: `"fail"` or `"stop"` (the flow fails and `## On Error` runs), `"continue"` (record the failure and go on with the next step; it counts as a failure), `"ignore"` (Kinenix 1.1.0: record the failure and go on, without counting it, for a step whose failure does not matter), `"next_item"` (inside a `logic.loop`: record the failure and go on with the next item, [flow_markdown_spec.md](flow_markdown_spec.md#31-retries-and-on_error-on-a-step)), or `"retry"` (same as `"fail"`; deprecated, removed in 2.0) |
 | `max_retries` | number or `${...}` | No | `0` | Extra attempts after the first failure, made before `on_error` decides (e.g. `3` = 1 attempt + 3 retries). Business errors (such as from `flow.fail`) are never retried |
 | `retry_interval` | number or `${...}` | No | `1.0` | Delay in seconds between attempts |
+| `error_message` | string or `${...}` | No | `null` | Kinenix 1.1.0: the message of the step's failure instead of the action's, in the log, `${error.message}`, and on the Hub. `${error.message}` inside it is the action's own message: `เปิดเว็บไม่ได้: ${error.message}` |
 | `fallback_step_id` | string | No | `null` | Deprecated, removed in 2.0: target step ID to execute as a recovery handler upon step failure. Use `on_error: continue` and a next step with a condition on `${error}`, or `## On Error` |
 
 In `flow.md`, write the fields as ordinary step keys. The compiler moves them into `error_handler`; they are not passed to the action. The JSON form `- **error_handler:** {"on_error": "continue", ...}` is also accepted.
@@ -1094,15 +1116,16 @@ In `condition`, write the operators as words: `contains`, `not contains`, `in`, 
 ---
 
 ### `logic.loop`
-Iterates over an array or list of objects, binding each element to an item variable.
+Iterates over an array or list of objects, binding each element to an item variable, or repeats its sub-steps a number of times (`times`, Kinenix 1.1.0). `logic.break` leaves it early, and `logic.next` goes on with the next item.
 
 `on_error`, `max_retries`, and `retry_interval` have no effect on this step, and `kinenix validate` reports them. Put them on the sub-steps that may fail; `on_error: next_item` there goes on with the next item.
 
 **Parameters:**
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `items` | list / string | Yes | Array or variable reference `${var}` to iterate |
-| `item_var` | string | No (default: item) | Context variable name representing the current iteration item |
+| `items` | list / string | Either | Array or variable reference `${var}` to iterate |
+| `times` | number or `${...}` | Either | Kinenix 1.1.0: repeat the sub-steps this many times (0 to 10,000) instead of iterating over `items`; `item_var` holds 1, 2, 3, ... A loop has `items` or `times`, not both. Running out of `times` is not an error |
+| `item_var` | string | No (default: item) | Context variable name representing the current iteration item; `${<item_var>_index}` holds its position from 0 |
 | `item_label` | string | No | How an item is named in `${error.loop.item}` and in failure records, e.g. `${row.request_id} ${row.brand}`. Default: the item's first three fields |
 
 **Example:**
@@ -1116,6 +1139,71 @@ Iterates over an array or list of objects, binding each element to an item varia
     - **operator:** equals
     - **right:** Active
 ```
+
+**Example: page by page until the last page (Kinenix 1.1.0):**
+```markdown
+> Requires: kinenix>=1.1.0
+
+### 3. Each Page (`logic.loop`)
+- **times:** ${config.max_pages}
+- **item_var:** page
+- **item_label:** Page ${page}
+- **Sub-steps:**
+  - Read The Books (`web.get_list`):
+    - **selector:** article.product_pod
+    - **fields:** {"title": "h3 a@title", "price": ".price_color"}
+    - **output_var:** books
+    - **on_error:** next_item
+  - Keep The Books (`logic.append`):
+    - **target:** all_books
+    - **item:** ${books}
+    - **extend:** true
+  - Is There A Next Page (`web.is_visible`):
+    - **selector:** li.next a
+    - **output_var:** next_visible
+  - Last Page (`logic.break`):
+    - **condition:** `${next_visible} == false`
+  - Next Page (`web.click`):
+    - **selector:** li.next a
+```
+
+**Output:** `{"total_items_processed": 4, "stopped_early": true}`: how many iterations ran, and whether a `logic.break` ended the loop.
+
+---
+
+### `logic.break`
+Kinenix 1.1.0. Leaves the innermost `logic.loop` it is in: the rest of this iteration is skipped, no further iteration starts, and the flow goes on after the loop. Put a `condition` on it to say when; without one it always leaves. It works in loops over `items` and with `times`, inside `logic.if` branches, and in `## On Error` and `## Finally`.
+
+It leaves only a loop of its own flow. In a subflow called for each item, return a value and put `logic.break` in the caller's loop. Outside a loop, `kinenix validate` reports it and a run stops at it with exit code 4. Items the loop does not reach because of a break are not counted as work items. `on_error`, `max_retries`, and `error_message` have no effect on it.
+
+**Parameters:** none.
+
+**Example:**
+```markdown
+  - Last Page (`logic.break`):
+    - **condition:** `${next_visible} == false`
+```
+
+**Output:** `{"status": "loop stopped"}`
+
+---
+
+### `logic.next`
+Kinenix 1.1.0. Skips the rest of this iteration of the innermost `logic.loop` and goes on with its next item, usually behind a `condition`. The item counts as done, unless one of its steps failed earlier. To skip because a step failed, use `on_error: next_item` on that step instead; the item then counts as failed.
+
+Like `logic.break`, it works only in a loop of its own flow: outside a loop, `kinenix validate` reports it and a run stops at it with exit code 4. `on_error`, `max_retries`, and `error_message` have no effect on it.
+
+**Parameters:** none.
+
+**Example:**
+```markdown
+  - Skip Out Of Stock (`logic.next`):
+    - **condition:** `${book.availability} contains Out of stock`
+  - Open The Book (`web.click`):
+    - **selector:** h3 a
+```
+
+**Output:** `{"status": "next item"}`
 
 ---
 
