@@ -8,6 +8,10 @@
 
 - **Batch flow rules for AI assistants** (#150): the new-project template's `AGENTS.md` and the new [docs/batch_flows.md](docs/batch_flows.md) teach five rules, each with a `flow.md` example: an output folder per run (`./output/${run.id}/`), `on_error: next_item` on every step that can fail for one item, `flow.fail` when a run produced nothing, a completion message with the counts and the failed items, and hand-written test pages for JavaScript sites.
 
+### Changed
+
+- **Plain causes for action errors** (#219): `root_cause` and `suggested_fix` explain the fixed error messages of Kinenix's own actions instead of a general wording. A `web.choose` value that is not on the page names the value and the options offered ("The value 'CX-30' is not one of the options in step 'Choose Model'. The page offers: CX-3."); `web.get_list` and `web.get_table` errors, empty parameters, no open browser page, files that already exist or use another encoding, and HTTP statuses of `http.request` are covered too. A message no rule knows names the step and its line in `flow.md`, not the step id.
+
 ## 1.1.0rc1 (2026-11-12)
 
 First release candidate of 1.1.0, for trying the new list functions, loop control, and `on_item_error` on real flows. Nothing promised in 1.0.0 changes. A flow that uses these features needs `> Requires: kinenix>=1.1.0rc1` while it is tested on this release candidate (`kinenix>=1.1.0` would refuse it, because 1.1.0rc1 comes before 1.1.0). Still to come in 1.1.0: #146, #150, #151, #153, #162, and #198.

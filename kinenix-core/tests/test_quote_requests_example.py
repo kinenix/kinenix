@@ -44,7 +44,8 @@ def test_five_requests_three_quoted_two_failed_with_their_reasons(project, chrom
 
     failed = {r["request_id"]: r["reason"] for r in _rows(project / "output" / "failed_requests.csv")}
     assert set(failed) == {"R004", "R005"}
-    assert "option 'CX-30' not found; available: CX-3" in failed["R004"]
+    # error.root_cause names the value and what the site offers (#219)
+    assert failed["R004"] == "The value 'CX-30' is not one of the options in step 'Choose Model'. The page offers: CX-3."
     assert failed["R005"] == "brand, model, and sub_model are required"
     assert sorted(p.name for p in (project / "output" / "screenshots").iterdir()) == ["R001.png", "R002.png", "R003.png"]
 
