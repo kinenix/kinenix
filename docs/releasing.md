@@ -65,20 +65,20 @@ Released version numbers can never be reused on PyPI or TestPyPI. If something i
 2. **Merge `dev` into `main`** through the usual release pull request. CI builds the packages, checks their metadata, and installs them in a clean environment.
 3. **Try it on TestPyPI:** in GitHub, open **Actions**, then **Release**, then **Run workflow** on `main`. When it finishes, check in a new virtual environment. Download only the three Kinenix packages from TestPyPI and take every other package from PyPI: anyone can upload to TestPyPI, and it holds broken copies of common packages (for example a `FASTAPI 1.0` that pip would pick with `--extra-index-url`).
    ```bash
-   pip download --no-deps -d testpypi --index-url https://test.pypi.org/simple/ kinenix==1.0.1 kinenix-hub==1.0.1 kinenix-worker==1.0.1
-   pip install --find-links testpypi "kinenix[hub,worker]==1.0.1"
+   pip download --no-deps -d testpypi --index-url https://test.pypi.org/simple/ kinenix==1.1.0rc1 kinenix-hub==1.1.0rc1 kinenix-worker==1.1.0rc1
+   pip install --find-links testpypi "kinenix[hub,worker]==1.1.0rc1"
    kinenix version
    kinenix-worker --version
    ```
    Then install it as a brand-new Linux user, as in section 2.1:
    ```bash
-   sudo .github/scripts/fresh_user_test.sh 1.0.1 --index testpypi
+   sudo .github/scripts/fresh_user_test.sh 1.1.0rc1 --index testpypi
    ```
 4. **Publish to PyPI** by tagging `main`:
    ```bash
    git switch main && git pull
-   git tag v1.0.1
-   git push origin v1.0.1
+   git tag v1.1.0rc1
+   git push origin v1.1.0rc1
    ```
    The workflow builds again, checks that the tag matches the package version, and publishes all three packages.
 5. Check https://pypi.org/project/kinenix/, `kinenix-hub`, and `kinenix-worker`, then install from PyPI in a clean environment.
@@ -90,8 +90,8 @@ Released version numbers can never be reused on PyPI or TestPyPI. If something i
 Every release is installed once as a brand-new Linux user, so nothing from an earlier installation (settings in `~/.kinenix`, flows, a virtual environment, a cached package) hides a problem. `.github/scripts/fresh_user_test.sh` does it in one command:
 
 ```bash
-sudo .github/scripts/fresh_user_test.sh 1.0.1 --index testpypi   # before tagging
-sudo .github/scripts/fresh_user_test.sh 1.0.1                    # after PyPI has it
+sudo .github/scripts/fresh_user_test.sh 1.1.0rc1 --index testpypi   # before tagging
+sudo .github/scripts/fresh_user_test.sh 1.1.0rc1                    # after PyPI has it
 ```
 
 It creates a temporary user, installs the three packages in a new virtual environment, and checks the versions, Chromium, the `hello` example (exit code 0), `quote_requests` (8, two requests fail by design), a run stopped with SIGTERM (130 and an `_interrupted.json` log), a new project from `kinenix init`, and a Hub on a free port with its migrations. It writes a Markdown report to `/var/tmp`, prints its path, and deletes the user; `--keep` keeps the user for a look. Exit code 0 means every check passed.
