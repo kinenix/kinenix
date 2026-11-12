@@ -136,7 +136,7 @@ The project bundle structure directly enables a robust deployment pipeline to un
 
 A web flow depends on pages it does not control: a changed button, a new cookie banner, or a renamed field breaks it in production. Testing it against saved copies of those pages catches the flow's own mistakes before it touches the real site, without internet, on any machine, and in CI.
 
-1. **Save the pages** the flow visits under `tests/pages/` in the bundle (in the browser: Save page as, "Webpage, Complete"), and remove customer data from them. Open each saved page in a browser first: a page built by JavaScript may need its scripts to show the form, and then a hand-written HTML page with the same selectors is the better test page.
+1. **Save the pages** the flow visits under `tests/pages/` in the bundle (in the browser: Save page as, "Webpage, Complete"), and remove customer data from them. Open each saved page in a browser first: a page built by JavaScript may need its scripts to show the form, and then a hand-written HTML page with the same selectors is the better test page ([batch_flows.md, rule 5](batch_flows.md#5-test-pages-for-javascript-sites-are-written-not-saved)).
 2. **Point the flow at them** with a second settings file. `config/test.json` holds only the keys that change for a test run; the rest comes from `config/config.json`:
    ```json
    {

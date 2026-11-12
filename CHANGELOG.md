@@ -2,6 +2,12 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+### Added
+
+- **Batch flow rules for AI assistants** (#150): the new-project template's `AGENTS.md` and the new [docs/batch_flows.md](docs/batch_flows.md) teach five rules, each with a `flow.md` example: an output folder per run (`./output/${run.id}/`), `on_error: next_item` on every step that can fail for one item, `flow.fail` when a run produced nothing, a completion message with the counts and the failed items, and hand-written test pages for JavaScript sites.
+
 ## 1.1.0rc1 (2026-11-12)
 
 First release candidate of 1.1.0, for trying the new list functions, loop control, and `on_item_error` on real flows. Nothing promised in 1.0.0 changes. A flow that uses these features needs `> Requires: kinenix>=1.1.0rc1` while it is tested on this release candidate (`kinenix>=1.1.0` would refuse it, because 1.1.0rc1 comes before 1.1.0). Still to come in 1.1.0: #146, #150, #151, #153, #162, and #198.
