@@ -23,6 +23,7 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [flow_markdown_spec.md](flow_markdown_spec.md) | `flow.md` syntax, validation, and the compiled form (`kinenix compile`) |
 | [actions_reference.md](actions_reference.md) | Every built-in action with parameters and examples |
 | [project_bundles.md](project_bundles.md) | Bundle layout, `config.json`, `.env`, subflows (`flow.call`), deployment lifecycle, testing against saved pages |
+| [batch_flows.md](batch_flows.md) | Designing a flow that loops over many items unattended: output folder per run, per-item errors, empty results, completion messages, test pages for JavaScript sites |
 | [llms.txt](llms.txt) | For AI assistants: how a flow is built and which pages to read, served as https://www.kinenix.com/llms.txt |
 
 ## Run and Operate

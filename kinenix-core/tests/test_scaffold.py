@@ -248,3 +248,16 @@ def test_a_new_project_names_the_kinenix_it_was_made_with(tmp_path):
     assert f"> Requires: kinenix>={__version__}" in text and "{{version}}" not in text
     with_finally = text + "\n## Finally\n\n### 2. Done (`logic.set_variable`)\n- **name:** `done`\n- **value:** ${len('ok')}\n"
     assert validate_flow(markdown_to_flow(with_finally)) == []
+
+
+def test_the_template_teaches_the_batch_flow_rules_and_links_their_page(tmp_path):
+    # #150: an assistant's flow passed validate but kept old files, stopped the batch on one item,
+    # reported success with no results, and used saved React pages that never worked as test pages
+    text = (scaffold.create_new_project("Get stock data", tmp_path / "p") / "AGENTS.md").read_text(encoding="utf-8")
+    batch = text.split("## Batch flows", 1)[1].split("\n## ", 1)[0]
+    for rule in ("./output/${run.id}/", "on_error: next_item", "flow.fail", "${len(failed)} failed", "tests/pages/"):
+        assert rule in batch, rule
+    assert batch.count("```markdown") >= 4
+    link = "https://github.com/kinenix/kinenix/blob/main/docs/batch_flows.md"
+    assert link in batch
+    assert (Path(__file__).resolve().parents[2] / "docs" / "batch_flows.md").is_file()

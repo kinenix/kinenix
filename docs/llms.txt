@@ -17,6 +17,7 @@ Expressions in `${...}` are a fixed, safe set of functions (no code runs); from 
 - [Flow Markdown specification](https://www.kinenix.com/flow_markdown_spec/): the `flow.md` format: steps, parameters, loops, conditions, expressions and list functions, `on_error` (`continue`, `next_item`), `## On Error` and `## Finally`, `${error}` and `${run}`
 - [Actions reference](https://www.kinenix.com/actions_reference/): every action (web, Excel and CSV, files, logic, dates, HTTP, subflows, e-mail, local AI) with its parameters and a `flow.md` example
 - [Project bundles](https://www.kinenix.com/project_bundles/): the project folder, `config.json`, `.env`, subflows with `flow.call`, and testing a flow against saved pages with `kinenix run --config`
+- [Batch flows](https://www.kinenix.com/batch_flows/): five rules for a flow that loops over many items unattended: an output folder per run, one bad item does not stop the batch, no success without results, a completion message with the failed items, and written test pages for JavaScript sites
 - [CLI guide](https://www.kinenix.com/cli_guide/): `kinenix init`, `run`, `validate`, `actions`, `list`, and their options
 
 ## Start
