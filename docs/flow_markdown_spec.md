@@ -49,6 +49,17 @@ Every `flow.md` must start with a Level 1 Heading (`#`) denoting the Flow Name, 
 
 `> Requires:` is optional. A Kinenix older than the version named refuses to run the flow with a message to upgrade. Flows that use `## On Error` or `## Finally` need `> Requires: kinenix>=0.2.0b4` (section 3.2).
 
+`kinenix validate` reports a missing or too low `> Requires:` when the flow uses something an older Kinenix would run wrongly instead of refusing, and names the version to require:
+
+| Version | Features |
+| :--- | :--- |
+| 0.2.0b4 | `## On Error`, `## Finally`, `inherit_config` on `flow.call` |
+| 0.3.0b1 | Expressions in `${...}`, `and` / `or` / `not` in conditions |
+| 0.4.0b1 | `on_error: next_item` |
+| 0.5.0b1 | `match` or `search_text` on `web.choose` |
+| 1.0.0 | `fail_on_error: true` on `http.request`, `round()` (halves round away from zero) |
+| 1.1.0 | List functions and comparisons in `${...}`, `logic.break`, `logic.next`, `times` on `logic.loop`, `on_error: ignore`, `error_message`, `on_item_error` on `web.get_list` and `web.get_table` |
+
 #### Example
 ```markdown
 # RPA Challenge Solver

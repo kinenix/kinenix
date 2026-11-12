@@ -10,6 +10,7 @@
 
 ### Changed
 
+- **`kinenix validate` asks for `> Requires:` for more features** (#198): `match` or `search_text` on `web.choose` (0.5.0b1), `fail_on_error: true` on `http.request` and `round()` (1.0.0), and `on_item_error` on `web.get_list` and `web.get_table` (1.1.0), which older workers would run wrongly instead of refusing. [docs/flow_markdown_spec.md](docs/flow_markdown_spec.md) lists every such feature with its version.
 - **Plain causes for action errors** (#219): `root_cause` and `suggested_fix` explain the fixed error messages of Kinenix's own actions instead of a general wording. A `web.choose` value that is not on the page names the value and the options offered ("The value 'CX-30' is not one of the options in step 'Choose Model'. The page offers: CX-3."); `web.get_list` and `web.get_table` errors, empty parameters, no open browser page, files that already exist or use another encoding, and HTTP statuses of `http.request` are covered too. A message no rule knows names the step and its line in `flow.md`, not the step id.
 
 ## 1.1.0rc1 (2026-11-12)
