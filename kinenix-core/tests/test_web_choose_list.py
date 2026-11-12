@@ -241,3 +241,66 @@ def test_several_loose_matches_are_an_error_not_a_guess():
     assert _choose_label(["HR-V", "H.R.V"], "HR-V", "loose") == "HR-V"  # an exact name wins
     assert _choose_label(["CITY", "CITY HATCHBACK"], "city", "loose") == "CITY"
     assert _choose_label(["CITY HATCHBACK"], "hatch", "contains") == "CITY HATCHBACK"
+
+
+# on_item_error (#192) ------------------------------------------------------------------------------------
+
+MESSY = """<!doctype html><html><body>
+<table id="t"><thead><tr><th>Title</th><th>Price</th></tr></thead><tbody>
+<tr><td>A</td><td>51.77</td></tr><tr><td>B</td><td>N/A</td></tr><tr><td>C</td><td>-</td></tr></tbody></table>
+<article class="book"><h3>A Light in the Attic</h3><p class="price">£51.77</p></article>
+<article class="book"><h3></h3><p class="price">£53.74</p></article>
+<article class="book"><h3>Soumission</h3><p class="price">N/A</p></article>
+<article class="book"><h3>Sharp Objects</h3><p class="price">£47.82</p></article>
+</body></html>"""
+
+
+@pytest.fixture
+def messy(tmp_path, chromium):
+    path = tmp_path / "messy.html"
+    path.write_text(MESSY, encoding="utf-8")
+    return path.as_uri()
+
+
+BOOKS_STEP = """### 2. Books (`web.get_list`)
+- **selector:** `article.book`
+- **fields:** {"title": "h3", "price": ".price"}
+- **required_fields:** ["title"]
+- **numeric_fields:** ["price"]
+- **output_var:** `books`
+"""
+
+
+def test_get_list_skips_items_that_cannot_be_read_and_says_so(messy, caplog):
+    context = _ok(_run(BOOKS_STEP + "- **on_item_error:** skip\n", messy))
+    assert [b["title"] for b in context.get_variable("books")] == ["A Light in the Attic", "Sharp Objects"]
+    assert [b["price"] for b in context.get_variable("books")] == [51.77, 47.82]
+    warning = next(r.getMessage() for r in caplog.records if "skipped 2 of 4 item(s)" in r.getMessage())
+    assert "item 2 has no 'title'" in warning and "item 3, field 'price'" in warning
+    assert "£53.74" not in warning  # the reason, not the item's content
+
+
+def test_get_list_still_fails_by_default(messy):
+    context = _run(BOOKS_STEP, messy)
+    assert context.has_error and "item 2 has no 'title'" in context.failure_details.error_message
+
+
+def test_min_rows_counts_the_items_that_are_kept(messy):
+    context = _run(BOOKS_STEP + "- **on_item_error:** skip\n- **min_rows:** 3\n", messy)
+    assert context.has_error and "expected at least 3 item(s)" in context.failure_details.error_message
+
+
+def test_get_table_skips_rows_with_a_number_that_cannot_be_read(messy, caplog):
+    context = _ok(_run("""### 2. Prices (`web.get_table`)
+- **selector:** `#t`
+- **numeric_columns:** ["Price"]
+- **on_item_error:** skip
+- **output_var:** `rows`
+""", messy))
+    assert context.get_variable("rows") == [{"Title": "A", "Price": 51.77}, {"Title": "C", "Price": None}]
+    assert any("skipped 1 of 3 item(s)" in r.getMessage() and "row 2" in r.getMessage() for r in caplog.records)
+
+
+def test_a_wrong_on_item_error_value_says_which_values_work(messy):
+    context = _run(BOOKS_STEP + "- **on_item_error:** ignore\n", messy)
+    assert context.has_error and "on_item_error must be fail or skip" in context.failure_details.error_message
