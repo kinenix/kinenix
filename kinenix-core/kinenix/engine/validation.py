@@ -83,14 +83,24 @@ NEWER_FEATURES = {
     "expressions in ${...}": ("0.3.0b1", "0.2.0b4", "turns expressions such as ${len(rows)} into empty text"),
     "and / or / not in conditions": ("0.3.0b1", "0.2.0b4", "reads and / or / not as part of a value"),
     "on_error: next_item": ("0.4.0b1", "0.3.0b1", "stops the flow at a step with on_error: next_item"),
+    "match or search_text on web.choose": (
+        "0.5.0b1", "0.4.0b1", "ignores match and search_text, so an option written differently from the site is not found"),
+    "fail_on_error on http.request": (
+        "1.0.0", "1.0.0rc2", "ignores fail_on_error and takes an HTTP status of 400 or higher as a success"),
+    "round() on halves": ("1.0.0", "1.0.0rc2", "rounds halves to the even number, so round(2.5) gives 2, not 3"),
     "on_error: ignore": ("1.1.0", "1.0.1", "stops the flow at a step with on_error: ignore"),
     "error_message": ("1.1.0", "1.0.1", "ignores error_message and reports the action's own message"),
     "logic.break": ("1.1.0", "1.0.1", "stops the flow at logic.break as an unknown action"),
     "logic.next": ("1.1.0", "1.0.1", "stops the flow at logic.next as an unknown action"),
     "times on logic.loop": ("1.1.0", "1.0.1", "runs a loop with times and no items zero times, without a warning"),
     "list functions and comparisons in ${...}": (
-        "1.1.0", "1.0.1", "stop the step at sort_by, where, sum, and comparisons, and read ${a and b} as empty text"),
+        "1.1.0", "1.0.1", "stops the step at sort_by, where, sum, and comparisons, and reads ${a and b} as empty text"),
+    "on_item_error on web.get_list or web.get_table": (
+        "1.1.0", "1.0.1", "ignores on_item_error and stops the step at the first item with a missing field or a "
+                          "value that is not a number"),
 }
+
+_FALSE_TEXT = ("false", "no", "0", "off")
 
 # Functions added in 1.1.0 (docs/design/list-functions.md)
 LIST_FUNCTIONS = {"sort_by", "where", "column", "sum", "min", "max", "average", "unique", "first", "last",
@@ -126,6 +136,22 @@ def _uses_expressions(steps: List[Step]) -> bool:
                         return True
                 except expressions.ExpressionError:
                     pass
+    return False
+
+
+def _calls(steps: List[Step], name: str) -> bool:
+    """A ${...} expression of these steps calls the function name()."""
+    for step in steps:
+        for text in _placeholders([step.parameters, step.condition]):
+            if text.startswith("env.") or expressions.problem(text) is not None:
+                continue
+            try:
+                tree = expressions.parse(text)
+            except expressions.ExpressionError:
+                continue
+            if any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == name
+                   for node in ast.walk(tree)):
+                return True
     return False
 
 
@@ -182,6 +208,16 @@ def _newer_features(flow: FlowDefinition) -> List[str]:
         used.append("on_error: ignore")
     if any(s.error_handler and s.error_handler.error_message for s in steps):
         used.append("error_message")
+    if any(s.action == "web.choose" and ("match" in s.parameters or "search_text" in s.parameters) for s in steps):
+        used.append("match or search_text on web.choose")
+    # fail_on_error: false is what older versions did anyway; only true asks for a newer worker
+    if any(s.action == "http.request" and "fail_on_error" in s.parameters
+           and str(s.parameters["fail_on_error"]).strip().lower() not in _FALSE_TEXT for s in steps):
+        used.append("fail_on_error on http.request")
+    if _calls(steps, "round"):
+        used.append("round() on halves")
+    if any(s.action in ("web.get_list", "web.get_table") and "on_item_error" in s.parameters for s in steps):
+        used.append("on_item_error on web.get_list or web.get_table")
     return used
 
 
