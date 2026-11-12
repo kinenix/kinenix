@@ -153,6 +153,8 @@ For actions that contain nested steps, use standard Markdown 2-space or 4-space 
     - **param2:** value
 ```
 
+From Kinenix 1.1.0, `- **times:** 10` (a number or `${...}`) repeats the sub-steps that many times instead of going through `items`; `item_var` then holds 1, 2, 3, ... A `logic.next` step skips the rest of the current item and goes on with the next one (the item counts as done), and a `logic.break` step leaves the innermost loop of its flow; both usually stand behind a `condition`, so "read page after page until there is no next page" is a `times` loop as a limit and a `logic.break` where it should end ([actions_reference.md](actions_reference.md#logicbreak)). Running out of `times` is not an error, and items not reached because of a break are not counted.
+
 #### B. Condition Syntax (`logic.if`)
 ```markdown
 ### [Step Name] (`logic.if`)

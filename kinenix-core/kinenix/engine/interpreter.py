@@ -21,6 +21,7 @@ from .. import __version__
 from ..actions.registry import ActionRegistry
 from ..envfile import read_env_file
 from ..actions.flow_control import SubflowExecutionError, is_business_error
+from ..errors import FlowStructureError
 from ..models.context import ExecutionContext, StepResult, FailureDetails, counts_as_failed, local_now
 from .expressions import to_text
 from ..models.flow import FlowDefinition, Step
@@ -122,6 +123,18 @@ def resolve_subflow_path(flow_target: str, context: Any) -> Path:
 
 class _NextItem(Exception):
     """on_error: next_item (#102): the failure is recorded, and the innermost logic.loop goes on with its next item."""
+
+
+class _BreakLoop(Exception):
+    """logic.break: the innermost logic.loop of this flow ends now (docs/design/loop-control.md)."""
+
+
+class _NextIteration(Exception):
+    """logic.next: the rest of this iteration is skipped, and the item counts as done (docs/design/loop-control.md)."""
+
+
+# Most iterations of a loop with `times`
+MAX_TIMES = 10_000
 
 
 class FlowInterpreter:
@@ -616,6 +629,14 @@ class FlowInterpreter:
             self._handle_if_step(step, evaluated_params, context, start_time)
             return
 
+        if step.action in ("logic.break", "logic.next") and context.get_variable("__loop_depth__"):
+            stopping = step.action == "logic.break"
+            self._record(context, StepResult(step_id=step.id, step_name=step.name, action=step.action,
+                                             status="success", start_time=start_time, end_time=local_now(),
+                                             duration_seconds=0.0,
+                                             output={"status": "loop stopped" if stopping else "next item"}), step)
+            raise _BreakLoop() if stopping else _NextIteration()
+
         if step.action == "flow.return":
             self._handle_flow_return_step(step, evaluated_params, context, start_time)
             return
@@ -774,13 +795,29 @@ class FlowInterpreter:
             context.failure_details = failure_diag
         raise last_error
 
+    def _loop_items(self, step: Step, evaluated_params: Dict[str, Any]) -> List[Any]:
+        """The items of a loop: `items`, or 1..N for `times` (docs/design/loop-control.md)."""
+        where = f"Step '{step.id}' ({step.name})"
+        if "times" not in step.parameters:
+            items = evaluated_params.get("items", [])
+            return items if isinstance(items, list) else [items]
+        if "items" in step.parameters:
+            raise FlowStructureError(f"{where}: a loop has items or times, not both.")
+        times = evaluated_params.get("times")
+        try:
+            count = float(str(times).strip())
+        except ValueError:
+            count = -1.0
+        if not count.is_integer() or not 0 <= count <= MAX_TIMES:
+            raise FlowStructureError(f"{where}: times must be a whole number from 0 to {MAX_TIMES}, not '{times}'.")
+        return list(range(1, int(count) + 1))
+
     def _handle_loop_step(self, step: Step, evaluated_params: Dict[str, Any], context: ExecutionContext, start_time: datetime) -> None:
-        items = evaluated_params.get("items", [])
+        items = self._loop_items(step, evaluated_params)
         item_var = evaluated_params.get("item_var", "item")
         sub_steps = step.sub_steps or []
-
-        if not isinstance(items, list):
-            items = [items]
+        ran = 0
+        stopped_early = False
 
         loops = list(context.get_variable("__loops__") or [])
         location = list(context.get_variable("__location__") or [context.flow_name])
@@ -793,11 +830,12 @@ class FlowInterpreter:
         counted = (step.parameters.get("item_label") not in (None, "") and isinstance(counts, dict)
                    and (context.get_variable("__section__") or "steps") == "steps")
         if counted:
-            counts["total"] += len(items)
+            counts["total"] += len(items)  # items a failure keeps the loop from reaching stay as not reached
         try:
             for index, item in enumerate(items):
                 if context.get_variable("__early_exit__"):
                     break
+                ran += 1
                 context.set_variable(item_var, item)
                 context.set_variable(f"{item_var}_index", index)
                 label = self._item_label(step.parameters.get("item_label"), item_var, item, context)
@@ -810,12 +848,20 @@ class FlowInterpreter:
                         self._execute_step(sub_step, context)
                 except _NextItem:
                     pass  # the failure was recorded; the item counts as failed below
+                except _NextIteration:
+                    pass  # skipped on purpose: the item counts as done unless something failed before
+                except _BreakLoop:
+                    stopped_early = True
                 except Exception:
                     if counted:
                         counts["failed"] += 1
                     raise
                 if counted:
                     counts["failed" if self._failure_count(context) > failures_before else "done"] += 1
+                if stopped_early:
+                    if counted:
+                        counts["total"] -= len(items) - ran  # a logic.break leaves the rest out on purpose
+                    break
         finally:
             context.set_variable("__loops__", loops)
             context.set_variable("__location__", location)
@@ -832,7 +878,7 @@ class FlowInterpreter:
             start_time=start_time,
             end_time=end_time,
             duration_seconds=duration,
-            output={"total_items_processed": len(items)}
+            output={"total_items_processed": ran, "stopped_early": stopped_early}
         )
         self._record(context, result, step)
 

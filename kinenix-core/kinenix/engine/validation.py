@@ -85,6 +85,9 @@ NEWER_FEATURES = {
     "on_error: next_item": ("0.4.0b1", "0.3.0b1", "stops the flow at a step with on_error: next_item"),
     "on_error: ignore": ("1.1.0", "1.0.1", "stops the flow at a step with on_error: ignore"),
     "error_message": ("1.1.0", "1.0.1", "ignores error_message and reports the action's own message"),
+    "logic.break": ("1.1.0", "1.0.1", "stops the flow at logic.break as an unknown action"),
+    "logic.next": ("1.1.0", "1.0.1", "stops the flow at logic.next as an unknown action"),
+    "times on logic.loop": ("1.1.0", "1.0.1", "runs a loop with times and no items zero times, without a warning"),
     "list functions and comparisons in ${...}": (
         "1.1.0", "1.0.1", "stop the step at sort_by, where, sum, and comparisons, and read ${a and b} as empty text"),
 }
@@ -165,6 +168,12 @@ def _newer_features(flow: FlowDefinition) -> List[str]:
         used.append("expressions in ${...}")
     if _uses_boolean_conditions(steps):
         used.append("and / or / not in conditions")
+    if any(s.action == "logic.break" for s in steps):
+        used.append("logic.break")
+    if any(s.action == "logic.next" for s in steps):
+        used.append("logic.next")
+    if any(s.action == "logic.loop" and "times" in s.parameters for s in steps):
+        used.append("times on logic.loop")
     if _uses_list_functions(steps):
         used.append("list functions and comparisons in ${...}")
     if any(_on_error(s) == "next_item" for s in steps):
@@ -223,6 +232,8 @@ NO_ERROR_HANDLER = {
     "logic.if": "Put them on the steps under Sub-steps and Else-steps that may fail.",
     "logic.loop": "Put them on the sub-steps that may fail; on_error: next_item there goes on with the next item.",
     "flow.return": "Delete them; flow.return only ends the flow.",
+    "logic.break": "Delete them; logic.break only leaves the loop.",
+    "logic.next": "Delete them; logic.next only goes on with the next item.",
 }
 
 
@@ -247,6 +258,11 @@ def validate_flow(flow: FlowDefinition) -> List[str]:
         issues.append(newer)
 
     for step in _outside_loops(_all_steps(flow)):
+        if step.action in ("logic.break", "logic.next"):
+            issues.append(f"Step '{step.id}' ({step.name}){f', line {step.line}' if step.line else ''}: "
+                          f"{step.action} is outside a logic.loop, so the run would stop at it. It works only in a "
+                          f"loop of its own flow; in a subflow called for each item, return a value and put "
+                          f"{step.action} in the caller's loop.")
         if _on_error(step) == "next_item":
             issues.append(f"Step '{step.id}' ({step.name}): on_error next_item is for steps inside a logic.loop; "
                           f"here it would stop the flow like fail. In a subflow called for each item, set "
@@ -259,6 +275,11 @@ def validate_flow(flow: FlowDefinition) -> List[str]:
             problem = grouping_problem(condition)
             if problem:
                 issues.append(f"{where}{f', line {step.line}' if step.line else ''}: {problem}")
+        if step.action == "logic.loop":
+            has_items, has_times = "items" in step.parameters, "times" in step.parameters
+            if has_items == has_times:
+                issues.append(f"{where}: a logic.loop needs items or times, "
+                              f"{'not both' if has_items else 'and has neither, so it would run no iteration'}.")
         ignored = _ignored_error_handler(step)
         if ignored:
             issues.append(f"{where}{f', line {step.line}' if step.line else ''}: {ignored}")

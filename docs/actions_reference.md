@@ -50,6 +50,8 @@ This document specifies the standard actions available in Kinenix. Each action l
    - [logic.delay](#logicdelay)
    - [logic.if](#logicif)
    - [logic.loop](#logicloop)
+   - [logic.break](#logicbreak)
+   - [logic.next](#logicnext)
    - [logic.append](#logicappend)
 5. [Dates (`date.*`)](#dates-date)
    - [date.calc](#datecalc)
@@ -1114,15 +1116,16 @@ In `condition`, write the operators as words: `contains`, `not contains`, `in`, 
 ---
 
 ### `logic.loop`
-Iterates over an array or list of objects, binding each element to an item variable.
+Iterates over an array or list of objects, binding each element to an item variable, or repeats its sub-steps a number of times (`times`, Kinenix 1.1.0). `logic.break` leaves it early, and `logic.next` goes on with the next item.
 
 `on_error`, `max_retries`, and `retry_interval` have no effect on this step, and `kinenix validate` reports them. Put them on the sub-steps that may fail; `on_error: next_item` there goes on with the next item.
 
 **Parameters:**
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `items` | list / string | Yes | Array or variable reference `${var}` to iterate |
-| `item_var` | string | No (default: item) | Context variable name representing the current iteration item |
+| `items` | list / string | Either | Array or variable reference `${var}` to iterate |
+| `times` | number or `${...}` | Either | Kinenix 1.1.0: repeat the sub-steps this many times (0 to 10,000) instead of iterating over `items`; `item_var` holds 1, 2, 3, ... A loop has `items` or `times`, not both. Running out of `times` is not an error |
+| `item_var` | string | No (default: item) | Context variable name representing the current iteration item; `${<item_var>_index}` holds its position from 0 |
 | `item_label` | string | No | How an item is named in `${error.loop.item}` and in failure records, e.g. `${row.request_id} ${row.brand}`. Default: the item's first three fields |
 
 **Example:**
@@ -1136,6 +1139,71 @@ Iterates over an array or list of objects, binding each element to an item varia
     - **operator:** equals
     - **right:** Active
 ```
+
+**Example: page by page until the last page (Kinenix 1.1.0):**
+```markdown
+> Requires: kinenix>=1.1.0
+
+### 3. Each Page (`logic.loop`)
+- **times:** ${config.max_pages}
+- **item_var:** page
+- **item_label:** Page ${page}
+- **Sub-steps:**
+  - Read The Books (`web.get_list`):
+    - **selector:** article.product_pod
+    - **fields:** {"title": "h3 a@title", "price": ".price_color"}
+    - **output_var:** books
+    - **on_error:** next_item
+  - Keep The Books (`logic.append`):
+    - **target:** all_books
+    - **item:** ${books}
+    - **extend:** true
+  - Is There A Next Page (`web.is_visible`):
+    - **selector:** li.next a
+    - **output_var:** next_visible
+  - Last Page (`logic.break`):
+    - **condition:** `${next_visible} == false`
+  - Next Page (`web.click`):
+    - **selector:** li.next a
+```
+
+**Output:** `{"total_items_processed": 4, "stopped_early": true}`: how many iterations ran, and whether a `logic.break` ended the loop.
+
+---
+
+### `logic.break`
+Kinenix 1.1.0. Leaves the innermost `logic.loop` it is in: the rest of this iteration is skipped, no further iteration starts, and the flow goes on after the loop. Put a `condition` on it to say when; without one it always leaves. It works in loops over `items` and with `times`, inside `logic.if` branches, and in `## On Error` and `## Finally`.
+
+It leaves only a loop of its own flow. In a subflow called for each item, return a value and put `logic.break` in the caller's loop. Outside a loop, `kinenix validate` reports it and a run stops at it with exit code 4. Items the loop does not reach because of a break are not counted as work items. `on_error`, `max_retries`, and `error_message` have no effect on it.
+
+**Parameters:** none.
+
+**Example:**
+```markdown
+  - Last Page (`logic.break`):
+    - **condition:** `${next_visible} == false`
+```
+
+**Output:** `{"status": "loop stopped"}`
+
+---
+
+### `logic.next`
+Kinenix 1.1.0. Skips the rest of this iteration of the innermost `logic.loop` and goes on with its next item, usually behind a `condition`. The item counts as done, unless one of its steps failed earlier. To skip because a step failed, use `on_error: next_item` on that step instead; the item then counts as failed.
+
+Like `logic.break`, it works only in a loop of its own flow: outside a loop, `kinenix validate` reports it and a run stops at it with exit code 4. `on_error`, `max_retries`, and `error_message` have no effect on it.
+
+**Parameters:** none.
+
+**Example:**
+```markdown
+  - Skip Out Of Stock (`logic.next`):
+    - **condition:** `${book.availability} contains Out of stock`
+  - Open The Book (`web.click`):
+    - **selector:** h3 a
+```
+
+**Output:** `{"status": "next item"}`
 
 ---
 
