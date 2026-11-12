@@ -29,7 +29,7 @@ A flow, a script, or a Hub query that works on 1.0.0 keeps working on every late
 | Hub API | The `/api/v1/` endpoints that workers and `kinenix hub` use, and the `X-API-Key` header | New endpoints and fields |
 | Settings | Environment variables (`KINENIX_*`, `DATABASE_URL`) and the keys of `~/.kinenix/kinenix.env` and `~/.kinenix/hub.env` | New variables and keys |
 
-`--json` output and its JSON Schemas join this list when they arrive in 1.1.0 ([design/agent-interface.md](design/agent-interface.md)): within the schema version `kinenix/1`, fields are only added.
+`--json` output and its JSON Schemas join this list when they arrive in 1.5.0 ([design/agent-interface.md](design/agent-interface.md)): within the schema version `kinenix/1`, fields are only added.
 
 ## 3. Not covered: may change in any release
 
