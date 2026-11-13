@@ -175,7 +175,8 @@ Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0
 
 **Compatibility:** additions only; nothing promised in 1.0.0 changes.
 
-- [ ] Release `1.1.0rc1` (2026-11-12) with #142, #143, #144, #173, #191, #192, #193, and #197, to test them on real flows (books.toscrape)
+- [x] Release `1.1.0rc1` (2026-11-12) with #142, #143, #144, #173, #191, #192, #193, and #197, to test them on real flows (books.toscrape)
+- [x] Release `1.1.0` (2026-11-13) with #146, #150, #151, #153, #162, #198, and #219 added
 
 ### 1.3.0: Hardening and docs
 
