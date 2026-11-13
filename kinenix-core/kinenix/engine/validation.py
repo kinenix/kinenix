@@ -99,6 +99,11 @@ NEWER_FEATURES = {
     "on_item_error on web.get_list or web.get_table": (
         "1.1.0", "1.0.1", "ignores on_item_error and stops the step at the first item with a missing field or a "
                           "value that is not a number"),
+    "rule_error on web.get_list or web.get_table": ("1.1.0", "1.0.1",
+                                                    "ignores rule_error and retries a list that breaks min_rows or "
+                                                    "required_fields as a technical error"),
+    "category: system on flow.fail": ("1.1.0", "1.0.1",
+                                      "stops with an error about the category instead of the flow's message"),
 }
 
 _FALSE_TEXT = ("false", "no", "0", "off")
@@ -219,6 +224,10 @@ def _newer_features(flow: FlowDefinition) -> List[str]:
         used.append("round() on halves")
     if any(s.action in ("web.get_list", "web.get_table") and "on_item_error" in s.parameters for s in steps):
         used.append("on_item_error on web.get_list or web.get_table")
+    if any(s.action in ("web.get_list", "web.get_table") and "rule_error" in s.parameters for s in steps):
+        used.append("rule_error on web.get_list or web.get_table")
+    if any(s.action == "flow.fail" and str(s.parameters.get("category", "")).strip().lower() == "system" for s in steps):
+        used.append("category: system on flow.fail")
     return used
 
 

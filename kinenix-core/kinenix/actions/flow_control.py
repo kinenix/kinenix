@@ -24,6 +24,18 @@ class FlowFailedError(RuntimeError):
     """A technical failure raised on purpose by flow.fail with category 'technical'."""
 
 
+# What other RPA tools call a System or Application Exception is a technical error in Kinenix (docs/logging.md)
+CATEGORY_ALIASES = {"business": "business", "technical": "technical", "system": "technical"}
+
+
+def error_category(value: Any, default: str, where: str) -> str:
+    """'business' or 'technical' from a category parameter; 'system' is accepted for 'technical'."""
+    text = str(value if value not in (None, "") else default).strip().lower()
+    if text not in CATEGORY_ALIASES:
+        raise ValueError(f"{where} must be business or technical (system means technical), not '{value}'.")
+    return CATEGORY_ALIASES[text]
+
+
 def is_business_error(exc: BaseException) -> bool:
     """
     Business exceptions are recognized by class name, so actions can define their own *Business* errors,
@@ -38,19 +50,16 @@ class FlowFailAction(BaseAction):
     Stops the flow with a clear message, typically under a condition, for example when expected data is missing.
     Parameters:
       - message: Text recorded as the error message and shown to whoever handles the failure.
-      - category: 'business' (default, not retried) or 'technical'.
+      - category: 'business' (default, not retried) or 'technical' ('system' is accepted for 'technical').
     """
     accepted_parameters = ('message', 'category')
     side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         message = str(parameters.get("message") or "Flow stopped by flow.fail")
-        category = str(parameters.get("category", "business")).lower()
-        if category == "business":
+        if error_category(parameters.get("category"), "business", "flow.fail: category") == "business":
             raise BusinessRuleError(message)
-        if category == "technical":
-            raise FlowFailedError(message)
-        raise ValueError(f"flow.fail: category must be 'business' or 'technical', got '{category}'")
+        raise FlowFailedError(message)
 
 
 @register_action("flow.call")

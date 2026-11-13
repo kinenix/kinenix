@@ -58,7 +58,7 @@ Every `flow.md` must start with a Level 1 Heading (`#`) denoting the Flow Name, 
 | 0.4.0b1 | `on_error: next_item` |
 | 0.5.0b1 | `match` or `search_text` on `web.choose` |
 | 1.0.0 | `fail_on_error: true` on `http.request`, `round()` (halves round away from zero) |
-| 1.1.0 | List functions and comparisons in `${...}`, `logic.break`, `logic.next`, `times` on `logic.loop`, `on_error: ignore`, `error_message`, `on_item_error` on `web.get_list` and `web.get_table` |
+| 1.1.0 | List functions and comparisons in `${...}`, `logic.break`, `logic.next`, `times` on `logic.loop`, `on_error: ignore`, `error_message`, `on_item_error` and `rule_error` on `web.get_list` and `web.get_table`, `category: system` on `flow.fail` |
 
 #### Example
 ```markdown
@@ -481,7 +481,7 @@ A failing step inside On Error or Finally is recorded and the rest of that secti
 | Field | Example |
 | :--- | :--- |
 | `${error.message}` | `Timeout 30000ms exceeded waiting for role=option[name='HONDA']` |
-| `${error.type}` | `Technical` or `Business` |
+| `${error.type}` | `Technical` or `Business`; what other RPA tools call a System or Application Exception is `Technical` ([logging.md, section 3](logging.md#3-exception-classification)) |
 | `${error.step_id}`, `${error.step_name}`, `${error.action}` | `sub_step_3_1`, `Choose Brand`, `web.click` |
 | `${error.path}` | `TIPH Quotes > Each Request > process_one > Choose Brand` (loops, conditions, and subflows on the way) |
 | `${error.subflow}` | `process_one`, or empty |
