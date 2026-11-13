@@ -517,6 +517,9 @@ def _means_expression(text: str) -> bool:
     return bool(_LOOKS_LIKE_EXPRESSION.search(text)) or "${" in text
 
 
+means_expression = _means_expression  # for kinenix validate
+
+
 def is_plain_path(tree: ast.Expression) -> bool:
     """True for a lookup such as `row.name`: names and dots only."""
     node = tree.body
