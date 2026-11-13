@@ -247,6 +247,8 @@ Dynamic variables must use the standard expression format:
 - **`${error.*}`** and **`${run.*}`**: The last failure and the current run (section 3.3).
 - **`${__flow_dir__}`**: The absolute path of the flow's bundle folder. Relative paths in file actions already resolve against it; use it to build an absolute path, for example to pass a file location to a subflow: `"${__flow_dir__}/output/report.csv"`.
 
+A variable that nothing sets is empty, so a misspelled name does not stop the run. `kinenix validate` checks every `${name}` against what can set it: `## Variables`, the keys of the config files in `config/` (each is also a variable of its own), `output_var`, `logic.set_variable`, `logic.append`, the `outputs` of `flow.call`, a loop's `item_var` and `<item_var>_index`, and `run`, `error`, `config`, `env`, and the `trigger_*` variables of the worker. A name close to one of those is a problem (`Did you mean 'customer_email'?`); any other is a hint, because it may come from `--vars`. Declare the variables a flow takes from `--vars` under `## Variables`, empty if they have no default, and the hint goes away.
+
 #### Expressions (Kinenix 0.3.0b1 and newer)
 
 Inside `${...}`, a value can also be calculated: counted, joined, cleaned, picked from a list, or computed. Nothing written in a flow can run code; only the functions and operators below exist. Design: [design/expressions.md](design/expressions.md).
@@ -581,7 +583,7 @@ Below is a complete `flow.md`: an earlier version of the **RPA Challenge Solver*
    ```bash
    kinenix validate flows/examples/quote_requests         # exit code 4 when problems are found
    ```
-   Each action declares the parameters it reads. `kinenix validate`, `kinenix run`, and `kinenix-worker run` report unknown actions, parameters that no action reads (which would otherwise be ignored silently), lines the parser ignores, step headings without an action, and a flow without steps, and suggest the closest name (for example `timout` -> `timeout`). They also follow `flow.call` targets into subflows. `run` only warns, except that a flow without steps does not run. The `kinenix-core` test suite validates every flow under `flows/` and every example in `docs/`.
+   Each action declares the parameters it reads. `kinenix validate`, `kinenix run`, and `kinenix-worker run` report unknown actions, parameters that no action reads (which would otherwise be ignored silently), lines the parser ignores, step headings without an action, and a flow without steps, and suggest the closest name (for example `timout` -> `timeout`). They also report `${names}` that nothing sets (Rule 5), and follow `flow.call` targets into subflows. `run` only warns, except that a flow without steps does not run. Lines starting with `Hint:` are not problems and do not change the exit code ([cli_guide.md, section 2.9](cli_guide.md#29-check-a-flow-validate)). The `kinenix-core` test suite validates every flow under `flows/` and every example in `docs/`.
 2. **Compiled form (for inspection):**
    ```bash
    kinenix compile flows/examples/quote_requests                   # print the compiled flow as JSON

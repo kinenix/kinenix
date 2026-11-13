@@ -81,10 +81,13 @@ class WorkerRunner:
             target_path = sandbox_dir / target_path.name
 
         flow_def = load_flow(target_path)
+        hints = []
         issues = (markdown_issues(target_path.read_text(encoding="utf-8-sig"))
-                  + validate_flow(flow_def) + validate_subflows(flow_def, work_dir))
+                  + validate_flow(flow_def, work_dir, hints) + validate_subflows(flow_def, work_dir, hints=hints))
         for issue in issues:
             logger.warning(issue)
+        for hint in hints:
+            logger.info(f"Hint: {hint}")
 
         # Auto-load config.json if present in the bundle directory
         config_file = work_dir / "config" / "config.json"

@@ -83,3 +83,4 @@ These are the mistakes AI assistants make most often in `flow.md`; `kinenix vali
       - **selector:** `input[value='${currency}']`
   ```
 - **Only the parameters an action accepts** (`kinenix actions <prefix>` lists them); `on_error`, `max_retries`, `retry_interval`, `error_message`, `output_var`, and `condition` belong to every step.
+- **Every `${name}` is set somewhere**: in `## Variables`, `config/config.json`, an `output_var`, or a loop's `item_var`. A misspelled name is empty and the run goes on. Declare the variables the flow takes from `--vars` under `## Variables`, empty if they have no default. Read the `Hint:` lines of `kinenix validate` too: they are not errors, but each one says what to check.

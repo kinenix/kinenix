@@ -7,6 +7,7 @@
 ### Added
 
 - **Batch flow rules for AI assistants** (#150): the new-project template's `AGENTS.md` and the new [docs/batch_flows.md](docs/batch_flows.md) teach five rules, each with a `flow.md` example: an output folder per run (`./output/${run.id}/`), `on_error: next_item` on every step that can fail for one item, `flow.fail` when a run produced nothing, a completion message with the counts and the failed items, and hand-written test pages for JavaScript sites.
+- **`kinenix validate` reports variables that nothing sets** (#162): a `${name}` that no `## Variables`, config key, `output_var`, `logic.set_variable`, `logic.append`, loop variable, or built-in sets. A name close to a defined one is a problem (`${custmer_email} is never set ... Did you mean 'customer_email'?`, exit code 4). Any other name may come from `--vars`, so it is reported on a new `Hint:` line, which does not change the exit code; declaring the name under `## Variables` makes it go away. `kinenix run`, `kinenix compile`, and the worker print the same lines. [docs/cli_guide.md](docs/cli_guide.md#29-check-a-flow-validate) describes the levels `Warning:`, `Hint:`, and `Deprecated:`.
 
 ### Changed
 

@@ -55,17 +55,19 @@ def override_config(name: str, flow_dir: Path) -> Dict[str, Any]:
 
 
 def report_validation(flow: FlowDefinition, md_path: Optional[Path] = None) -> List[str]:
-    """Print validation problems as warnings and return them; with md_path, also lines flow.md ignores
-    and problems in the subflows of that bundle."""
-    issues = []
+    """Print validation problems as warnings and return them; with md_path, also lines flow.md ignores,
+    problems in the subflows of that bundle, and hints (printed, not returned: they are not problems)."""
+    issues, hints = [], []
     if md_path is not None and md_path.suffix.lower() == ".md" and md_path.is_file():
         issues.extend(markdown_issues(md_path.read_text(encoding="utf-8-sig")))
-    issues.extend(validate_flow(flow))
+    issues.extend(validate_flow(flow, md_path.parent if md_path is not None else None, hints))
     if md_path is not None:
-        issues.extend(validate_subflows(flow, md_path.parent))
+        issues.extend(validate_subflows(flow, md_path.parent, hints=hints))
         issues.extend(leftover_json_flows(md_path))
     for issue in issues:
         print(f"Warning: {issue}", file=sys.stderr)
+    for hint in hints:
+        print(f"Hint: {hint}", file=sys.stderr)
     return issues
 
 
