@@ -133,34 +133,28 @@ With the URL set:
 
 ### E. Run as a systemd Service
 
-The service keeps `kinenix-worker daemon` running in the background, starts it at boot, and restarts it within 10 seconds if it stops. It runs as the user who installed it, from the repository directory, so relative flow paths such as `flows/examples/quote_requests` work. While it runs, the worker sends heartbeats and shows as online in the Hub.
+The service keeps `kinenix-worker daemon` running in the background, starts it at boot, and restarts it within 10 seconds if it stops. It runs as the user who installed it. While it runs, the worker sends heartbeats and shows as online in the Hub. It needs systemd (Ubuntu, Raspberry Pi OS, and most Linux systems); on Windows, start the worker with Task Scheduler, on macOS with launchd (the command prints an example).
 
-`setup_rpi.sh` installs it. To install or update it on an existing setup, run as your normal user (not root):
+**Installed with pip** (`pip install "kinenix[worker]"` in a virtual environment, or pipx): run as your normal user (not root):
 
 ```bash
-./kinenix-worker/scripts/install_service.sh
+kinenix-worker service install              # install or update, then start
+kinenix-worker service install --dry-run    # only print the unit file it would write
+kinenix-worker service uninstall            # stop and remove the service
 ```
 
-**Installed with pip?** `install_service.sh` is in this repository, not in the package, and expects a clone with `.venv`. Until `kinenix-worker service install` exists (#153), write the unit yourself, with your user name and the path of your virtual environment, as `/etc/systemd/system/kinenix-worker.service`:
+The service runs the `kinenix-worker` of the environment you ran the command from, in your flows folder (`kinenix flows-dir`, default `~/kinenix-flows`), so triggers can name flows by their folder name. `--working-dir` chooses another folder, against which relative paths in `triggers.json` resolve. After an upgrade, or after moving or recreating the virtual environment, run `kinenix-worker service install` again: it rewrites the unit. sudo is used only to write `/etc/systemd/system/kinenix-worker.service` and to run `systemctl`. If drop-in files in `/etc/systemd/system/kinenix-worker.service.d/` override the unit (for example one written by hand before this command existed), it names them and how to remove them; it does not remove them itself.
 
-```ini
-[Unit]
-Description=Kinenix Worker
-After=network-online.target
-Wants=network-online.target
+**A clone of this repository:** `setup_rpi.sh` installs the service. To install or update it on an existing setup, run as your normal user:
 
-[Service]
-User=YOU
-WorkingDirectory=/home/YOU/kinenix-flows
-ExecStart=/bin/bash -c 'if [ -f /home/YOU/.kinenix/worker.env ]; then . /home/YOU/.kinenix/worker.env; fi; exec /home/YOU/kx/bin/kinenix-worker daemon --config /home/YOU/.kinenix/triggers.json'
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
+```bash
+./kinenix-worker/scripts/install_service.sh              # calls kinenix-worker service install --working-dir <repository>
+./kinenix-worker/scripts/install_service.sh --uninstall
 ```
 
-Then `sudo systemctl daemon-reload && sudo systemctl enable --now kinenix-worker`. `systemctl stop` lets a running flow finish its step and run `## Finally` (up to 60 seconds) before the worker exits.
+It runs the service from the repository folder, so relative flow paths such as `flows/examples/quote_requests` work.
+
+`systemctl stop` lets a running flow finish its step and run `## Finally` (up to 60 seconds) before the worker exits.
 
 It reads two files in `~/.kinenix/`, creating them if they do not exist (existing files are never overwritten):
 
@@ -176,7 +170,7 @@ git clone git@github.com:<you>/kinenix-flows.git ~/kinenix-flows     # your priv
 cd ~/kinenix-flows && git pull                                        # later, to update the flows
 ```
 
-A trigger can then name a flow by its folder name; the worker looks it up in the flows folder (or in `KINENIX_FLOWS_DIR`). Paths still work too, relative to this repository.
+A trigger can then name a flow by its folder name; the worker looks it up in the flows folder (or in `KINENIX_FLOWS_DIR`). Paths still work too, relative to the folder the service runs in.
 
 Example `triggers.json`:
 
@@ -224,7 +218,8 @@ Set `KINENIX_WORKER_LOG_LEVEL=WARNING` in `worker.env` to keep only warnings and
 | Status | `systemctl status kinenix-worker` |
 | Follow logs | `journalctl -u kinenix-worker -f` |
 | Stop until next boot | `sudo systemctl stop kinenix-worker` |
-| Remove the service | `./kinenix-worker/scripts/install_service.sh --uninstall` |
+| Update after an upgrade or a venv move | `kinenix-worker service install` |
+| Remove the service | `kinenix-worker service uninstall` (a clone: `./kinenix-worker/scripts/install_service.sh --uninstall`) |
 
 Jobs sent from the Hub are not supported yet; each worker runs the triggers in its own `triggers.json`.
 
@@ -233,7 +228,7 @@ Jobs sent from the Hub are not supported yet; each worker runs the triggers in i
 ## 4. CLI Reference
 
 ```text
-usage: kinenix-worker [-h] [--version] {info,ping,run,watch,schedule,daemon} ...
+usage: kinenix-worker [-h] [--version] {info,ping,run,watch,schedule,daemon,service} ...
 
 positional arguments:
     info      Display worker machine hardware, architecture, and runtime stats
@@ -242,6 +237,7 @@ positional arguments:
     watch     Watch a directory and automatically trigger a flow when new files appear
     schedule  Execute a flow on an interval (--interval) or a cron expression (--cron "0 8 1 * *")
     daemon    Run multi-trigger daemon using a configuration file
+    service   Install or remove the systemd service (Linux): service install [--working-dir DIR] [--dry-run], service uninstall
 
 options:
   --version, -v
