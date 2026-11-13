@@ -278,6 +278,21 @@ def _next_is_available(page: Page, next_selector: str) -> bool:
 ITEM_ERROR_VALUES = ("fail", "skip")
 
 
+class ListRuleBusinessError(ValueError):
+    """A list that breaks a rule of its step (min_rows, required_fields, a number field) with rule_error: business:
+    recorded as error type Business and not retried (#146)."""
+
+
+def _rule_error(parameters: Dict[str, Any], action: str) -> str:
+    """`rule_error`: technical (default) or business, for the failures of min_rows, required fields, and numbers."""
+    from .flow_control import error_category
+    return error_category(parameters.get("rule_error"), "technical", f"{action}: rule_error")
+
+
+def _broken_rule(message: str, category: str) -> ValueError:
+    return ListRuleBusinessError(message) if category == "business" else ValueError(message)
+
+
 def _on_item_error(parameters: Dict[str, Any], action: str) -> str:
     """`on_item_error`: fail (default) stops the step at the first item that cannot be read; skip leaves it out (#192)."""
     value = str(parameters.get("on_item_error") or "fail").strip().lower()
@@ -328,12 +343,13 @@ def _read_pages(page: Page, parameters: Dict[str, Any], action: str,
 class WebGetTableAction(BaseAction):
     """Reads an HTML <table> into a list of row dicts keyed by the header cells, following its pages when asked."""
     accepted_parameters = LOCATOR_PARAMETERS + ('columns', 'numeric_columns', 'add_columns', 'min_rows', 'timeout',
-                                                'on_item_error') + PAGING_PARAMETERS
+                                                'on_item_error', 'rule_error') + PAGING_PARAMETERS
     side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
         page = _get_page(context)
         on_item_error = _on_item_error(parameters, "web.get_table")
+        rule_error = _rule_error(parameters, "web.get_table")
         locator = _resolve_locator(page, parameters).first
         timeout = float(parameters.get("timeout", 30000))
         columns = parameters.get("columns")
@@ -375,8 +391,8 @@ class WebGetTableAction(BaseAction):
                     try:
                         row[name] = float(text)
                     except ValueError:
-                        raise ValueError(f"web.get_table: row {number}: value '{row[name]}' in column '{name}' "
-                                         f"is not a number") from None
+                        raise _broken_rule(f"web.get_table: row {number}: value '{row[name]}' in column "
+                                           f"'{name}' is not a number", rule_error) from None
             except ValueError as e:
                 if on_item_error != "skip":
                     raise
@@ -392,9 +408,9 @@ class WebGetTableAction(BaseAction):
             rows = [{**add_columns, **row} for row in rows]
 
         if len(rows) < min_rows:
-            raise ValueError(
-                f"web.get_table: expected at least {min_rows} row(s) in '{parameters.get('selector')}', found {len(rows)}."
-            )
+            raise _broken_rule(
+                f"web.get_table: expected at least {min_rows} row(s) in '{parameters.get('selector')}', found {len(rows)}.",
+                rule_error)
         return rows
 
 
@@ -412,7 +428,7 @@ class WebGetListAction(BaseAction):
     element matching `selector`, one value per field, each field found inside that element.
     """
     accepted_parameters = ('selector', 'fields', 'numeric_fields', 'required_fields', 'add_columns', 'min_rows',
-                           'timeout', 'on_item_error') + PAGING_PARAMETERS
+                           'timeout', 'on_item_error', 'rule_error') + PAGING_PARAMETERS
     side_effects = ('none',)
 
     def execute(self, parameters: Dict[str, Any], context: ExecutionContext) -> Any:
@@ -427,6 +443,7 @@ class WebGetListAction(BaseAction):
         numeric = list(parameters.get("numeric_fields") or [])
         required = list(parameters.get("required_fields") or [])
         on_item_error = _on_item_error(parameters, "web.get_list")
+        rule_error = _rule_error(parameters, "web.get_list")
         unknown = [name for name in numeric + required if name not in fields]
         if unknown:
             raise ValueError(f"web.get_list: {unknown} are not in fields ({', '.join(fields)}).")
@@ -441,7 +458,7 @@ class WebGetListAction(BaseAction):
             items.first.wait_for(state="attached", timeout=timeout)
         except Exception:
             if min_rows > 0:
-                raise ValueError(f"web.get_list: no element matches '{selector}' within {timeout:.0f} ms.")
+                raise _broken_rule(f"web.get_list: no element matches '{selector}' within {timeout:.0f} ms.", rule_error)
 
         def read_field(item, spec: str) -> str:
             match = _FIELD_ATTRIBUTE.match(spec or "")
@@ -468,14 +485,14 @@ class WebGetListAction(BaseAction):
             try:
                 for name in required:
                     if row[name] == "":
-                        raise ValueError(f"web.get_list: item {number} has no '{name}' (selector '{fields[name]}'); "
-                                         f"the item reads {row}.")
+                        raise _broken_rule(f"web.get_list: item {number} has no '{name}' (selector "
+                                           f"'{fields[name]}'); the item reads {row}.", rule_error)
                 # Blank and "-" become None, as in web.get_table; text with no number in it is an error
                 for name in numeric:
                     try:
                         row[name] = parse_number(row[name]) if row[name] not in ("", "-") else None
                     except ValueError as e:
-                        raise ValueError(f"web.get_list: item {number}, field '{name}': {e}") from None
+                        raise _broken_rule(f"web.get_list: item {number}, field '{name}': {e}", rule_error) from None
             except ValueError as e:
                 if on_item_error != "skip":
                     raise
@@ -488,7 +505,8 @@ class WebGetListAction(BaseAction):
         if add_columns:
             rows = [{**add_columns, **row} for row in rows]
         if len(rows) < min_rows:
-            raise ValueError(f"web.get_list: expected at least {min_rows} item(s) matching '{selector}', found {len(rows)}.")
+            raise _broken_rule(f"web.get_list: expected at least {min_rows} item(s) matching '{selector}', "
+                               f"found {len(rows)}.", rule_error)
         return rows
 
 

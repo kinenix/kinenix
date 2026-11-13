@@ -20,6 +20,10 @@ All runtime exceptions encountered in flows and actions must be categorized into
 - **Responsible Party:** Business Operations / Workflow Owner.
 - **Handling:** Do not retry blindly; record business reason, capture state screenshot, and dispatch a structured business alert to LINE or the dashboard.
 
+### Names
+- Record and display only `Technical` and `Business` (`error_type`, `${error.type}`, the Hub). These values are part of the 1.x promise; do not rename them or add a third type.
+- Parameters that choose a type (`category` of `flow.fail`, `rule_error`) accept `system` for `technical`, so developers from other RPA tools can write the name they know. Use `error_category()` in `kinenix/actions/flow_control.py` for any new one. The mapping table lives in [docs/logging.md, section 3](../../docs/logging.md#3-exception-classification).
+
 ---
 
 ## 2. Structured Error Telemetry for AI Diagnostics

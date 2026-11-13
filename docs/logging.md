@@ -163,6 +163,15 @@ Every failure in `failure_details.error_type` is classified as either:
 | **Technical** | Timeouts, service outages, selectors not found after retries, missing binaries | RPA developer / DevOps |
 | **Business** | Invalid or inconsistent business data (e.g. invoice total does not match PO) | Business operations |
 
+A business error is not retried (`max_retries` applies only to technical errors) and ends the run with exit code 3; a technical one ends it with exit code 1. A failure is Business when the flow says so: `flow.fail` (its default `category`), `web.get_list` and `web.get_table` with `rule_error: business` (Kinenix 1.1.0), and a business error inside a subflow. Everything else is Technical.
+
+Other RPA tools use the same two types under other names. Where a tool or a developer says "System Exception" or "Application Exception", Kinenix says Technical; `category` of `flow.fail` and `rule_error` accept `system` for `technical` (Kinenix 1.1.0). `${error.type}` and the Hub's `error_type` always say `Technical` or `Business`.
+
+| Kinenix | UiPath | Blue Prism | Automation Anywhere |
+| :--- | :--- | :--- | :--- |
+| Business | Business Exception (`BusinessRuleException`) | Business Exception | Business Exception |
+| Technical | System Exception; Application Exception in Orchestrator queues | System Exception | System Exception |
+
 Handling requirements for each type are defined in `.agents/rules/error_handling.md`.
 
 ---
