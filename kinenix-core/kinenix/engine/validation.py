@@ -386,14 +386,70 @@ def _variable_findings(flow: FlowDefinition, flow_dir: Path) -> Tuple[List[str],
     return problems, hints
 
 
+# Actions that do not fail because of one item's data: they never need an error policy in a loop (#151).
+# flow.fail fails on purpose; without on_error it is meant to stop the run
+CANNOT_FAIL_FOR_AN_ITEM = {"logic.set_variable", "logic.append", "logic.delay", "logic.if", "logic.loop",
+                           "logic.break", "logic.next", "flow.return", "flow.fail", "web.close", "file.exists",
+                           "web.is_visible"}
+
+
+def _loop_body(steps: Iterable[Step]) -> Iterable[Step]:
+    """The steps one iteration runs: sub-steps and logic.if branches, but not the inside of a nested loop."""
+    for step in steps or []:
+        yield step
+        if step.action == "logic.if":
+            yield from _loop_body(step.sub_steps)
+            yield from _loop_body(step.else_steps)
+
+
+def _has_error_policy(step: Step) -> bool:
+    """on_error written on the step (on_error: fail too: the author decided), optional, or fallback_step_id."""
+    handler = step.error_handler
+    if handler and ("on_error" in handler.model_fields_set or handler.fallback_step_id):
+        return True
+    return str(step.parameters.get("optional", "")).strip().lower() in ("true", "yes", "1")
+
+
+def _at(step: Step) -> str:
+    return f"'{step.name}'{f' line {step.line}' if step.line else ''}"
+
+
+def _loop_hints(flow: FlowDefinition) -> List[str]:
+    """
+    A loop with sub-steps on on_error: next_item and others that may fail without an error policy (#151): one
+    bad item then stops the whole loop, usually by mistake.
+    """
+    hints = []
+    for loop in _walk(_all_steps(flow)):
+        if loop.action != "logic.loop":
+            continue
+        body = list(_loop_body(loop.sub_steps))
+        skipping = [s for s in body if _on_error(s) == "next_item"]
+        stopping = [s for s in body if s.action not in CANNOT_FAIL_FOR_AN_ITEM and not _has_error_policy(s)]
+        if not skipping or not stopping:
+            continue
+        listed = ", ".join(_at(s) for s in stopping[:3])
+        more = f", and {len(stopping) - 3} more" if len(stopping) > 3 else ""
+        users = " and ".join(_at(s) for s in skipping[:2]) + (" and others" if len(skipping) > 2 else "")
+        count = (f"{len(stopping)} sub-steps that may fail stop the whole loop when they fail" if len(stopping) > 1
+                 else "1 sub-step that may fail stops the whole loop when it fails")
+        hints.append(
+            f"Step '{loop.id}' ({loop.name}){f', line {loop.line}' if loop.line else ''}: {count} "
+            f"({listed}{more}), while {users} {'uses' if len(skipping) == 1 else 'use'} "
+            f"on_error: next_item. Add on_error: next_item to the steps that may fail for one item, or write "
+            f"on_error: fail on those where one failure should stop the run.")
+    return hints
+
+
 def validate_flow(flow: FlowDefinition, flow_dir: Optional[Path] = None,
                   hints: Optional[List[str]] = None) -> List[str]:
     """
     Return human-readable problems found in the flow; an empty list means none.
 
     With flow_dir, the bundle folder whose config the flow reads, it also checks that every ${name} is set
-    somewhere, and adds what may still be intended (a name from --vars) to hints when a list is given. Hints
-    are not problems: kinenix validate prints them without failing.
+    somewhere. When a list is given, hints receives what is often a mistake but may be intended: a name only
+    --vars could set, a loop that mixes on_error: next_item with steps that stop it. Hints are not problems:
+    kinenix validate prints them without failing.
     """
     issues: List[str] = []
     known_actions = ActionRegistry.list_actions()
@@ -464,6 +520,8 @@ def validate_flow(flow: FlowDefinition, flow_dir: Optional[Path] = None,
         issues.extend(problems)
         if hints is not None:
             hints.extend(found)
+    if hints is not None:
+        hints.extend(_loop_hints(flow))
     return issues
 
 
