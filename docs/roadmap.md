@@ -171,11 +171,12 @@ Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0
 
 ### 1.1.0: Flow data tools
 
-**Goal:** fix what real flows written by AI assistants ran into after the release candidates: sorting, filtering, and totals on lists (#142, #143); shorter conditions (#144); loops that stop early and paging with per-page error tolerance (#191, #192); text-to-value lookups (#194); a custom error message on any step (#193) and `on_error: ignore` for steps whose failure does not matter (#197); clearer business errors on web lists (#146); template guidance (#150) and a validate hint for loops (#151); `kinenix-worker service install` after `pip install` (#153); worker logs of its triggers (#156); and `> Requires:` detection for features newer than 0.4.0b1 (#198).
+**Goal:** fix what real flows written by AI assistants ran into after the release candidates: sorting, filtering, and totals on lists (#142, #143); shorter conditions (#144); loops that stop early and paging with per-page error tolerance (#191, #192); text-to-value lookups (#194); a custom error message on any step (#193) and `on_error: ignore` for steps whose failure does not matter (#197); clearer business errors on web lists (#146); plain causes and fixes for the errors of Kinenix's own actions (#219); template guidance (#150) and a validate hint for loops (#151); `kinenix-worker service install` after `pip install` (#153); worker logs of its triggers (#156); and `> Requires:` detection for features newer than 0.4.0b1 (#198).
 
 **Compatibility:** additions only; nothing promised in 1.0.0 changes.
 
-- [ ] Release `1.1.0rc1` (2026-11-12) with #142, #143, #144, #173, #191, #192, #193, and #197, to test them on real flows (books.toscrape)
+- [x] Release `1.1.0rc1` (2026-11-12) with #142, #143, #144, #173, #191, #192, #193, and #197, to test them on real flows (books.toscrape)
+- [x] Release `1.1.0` (2026-11-13) with #146, #150, #151, #153, #162, #198, and #219 added
 
 ### 1.3.0: Hardening and docs
 
@@ -189,21 +190,21 @@ Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0
 
 Until 2026-11-03 this section was 1.1.0, "Agent interface". The goal grew: an agent works like an employee who builds a flow from a requirements file for a person to review, runs the flows a person schedules, and says when a flow failed, did not run, or did not produce its file. The checklist is #97; #125 is the benchmark.
 
-**Goal:** an AI agent, a small model running locally first, can use Kinenix the way a careful person does: find out what it can do, ask about runs ("did hello fail at 11 pm?"), start a run on a worker ("run hello on the Raspberry Pi") after a person confirms, and read and explain the result. Kinenix keeps working without any agent. Design: [design/agent-interface.md](design/agent-interface.md).
+**Goal:** an AI agent (OpenClaw, Hermes, and Nanobot are tested), with a small local model first, can use Kinenix the way a careful person does: find out what it can do, build a flow for a person to review, answer questions about runs ("did hello fail at 11 pm?") from the Hub, start a run on a worker ("run hello on the Raspberry Pi") after a person confirms, and read and explain the result. Kinenix keeps working without any agent. Design: [design/agent-interface.md](design/agent-interface.md).
 
 The setup this milestone is tested on: the Ubuntu machine runs the Hub, a local model (Ollama), and the agent; the Raspberry Pi stays a worker without AI.
 
-**Scope:** the tools with a contract (design sections 3 to 9), the MCP server, `kinenix ask` (finishing [ask_router.md](ask_router.md)), and job dispatch from the Hub to a worker.
+**Scope:** the tools with a contract (design sections 3 to 9), flow approval (section 12), the MCP server `kinenix mcp` (section 13), and job dispatch from the Hub to a worker (section 14). `kinenix ask` is left out (decided 2026-11-12): the agent talks to the person.
 
 **Exit criteria**
 
 Automated:
 - [ ] `--json` with the shared envelope on every command; JSON Schemas in `schemas/` for Run, Step, Failure, Issue, and Flow; contract tests in CI check every `--json` answer against them
-- [ ] `kinenix capabilities`, `kinenix describe FLOW` (inputs and side effects), `kinenix runs status RUN_ID`, `--var`, `--dry-run`, `--detach`, and `--yes`; stable error codes with `retryable`
-- [ ] Job dispatch: the Hub sends a run to a chosen worker, the worker runs it and reports as today, and a person confirms every run started this way
-- [ ] MCP server with a short list of tools (read-only ones free, runs only after confirmation), using the same functions as the CLI
-- [ ] `kinenix ask` answers questions about runs and workers in Thai and English with a local model, every number from the Hub database
-- [ ] An evaluation set of agent tasks (ask, run, explain a failure) with a success rate measured for at least one small local model and one cloud model
+- [ ] `kinenix capabilities`, `kinenix describe FLOW` (inputs and side effects), `kinenix runs status RUN_ID`, `--var`, `--dry-run` with a confirmation token, `--detach` (a local process), and `--yes`; stable error codes with `retryable`
+- [ ] `kinenix approve FLOW`: a run started by an agent refuses a flow that changed since a person approved it
+- [ ] Job dispatch: the worker long-polls the Hub for jobs, runs only flows already in its flows folder that its owner allowed, and reports as today; a person confirms every job on the Hub dashboard
+- [ ] `kinenix mcp` over standard input and output with a short list of tools (read-only ones free, runs only after confirmation by MCP elicitation or a token), using the same functions as the CLI
+- [ ] An evaluation set of agent tasks (build a flow for review, run after confirmation, explain a failure, say what did not run) with a success rate measured for at least one small local model and one cloud model, through OpenClaw, Hermes, and Nanobot
 - [ ] A benchmark of how well popular AI assistants build flows from `requirements.md`, with a fixed method and a hidden task, published as `docs/benchmarks/assistants.md` (#125)
 - [ ] Two more business examples, each with its `requirements.md`: `invoice_check` (supplier invoices in Excel checked for totals, duplicates, and missing PO numbers; `file.list` with `item_label`, `on_error: next_item`, `file.zip`, `email.send`) and `daily_sales_report` (a sales table from a portal compared with targets; `web.get_table`, a worker schedule, `kinenix hub report`)
 - [ ] The website organized as tutorial, how-to, reference, and explanation (#118)
@@ -212,7 +213,7 @@ Field test:
 - [ ] On the Ubuntu machine, a local model answers "did this flow fail last night, and where?" correctly from the Hub, and starts a flow on the Raspberry Pi worker after confirmation
 
 Docs and release:
-- [ ] An agent guide shipped in the package (`kinenix agent-guide`), usable as an OpenClaw or Claude skill
+- [ ] An agent guide shipped in the package (`kinenix agent-guide`), usable as a skill by OpenClaw, Hermes, Nanobot, and Claude
 - [ ] CHANGELOG entry; TestPyPI checked; tag `v1.5.0`; PyPI checked
 
 **Compatibility:** additions only; nothing promised in 1.0.0 changes.
@@ -352,6 +353,7 @@ Paused on 2026-10-08. Flows are written as `flow.md` from a `requirements.md` wi
 - [x] Verified on Raspberry Pi 4 (ARM64) with setup script; re-verified on 2026-10-05 after the rename to Hub: heartbeats as a systemd service and the `bot_fx_rate` flow run by a cron trigger, reported to the Hub
 - [x] Heartbeat sender to the Hub (`kinenix-worker ping`, busy/online/offline status), with `rich` output
 - [x] systemd service installed by the setup script (`install_service.sh`), starts the daemon at boot
+- [x] `kinenix-worker service install` and `uninstall` for workers installed with pip (#153)
 - [x] Cron schedules (`"cron": "0 8 1 * *"` in `triggers.json`, `kinenix-worker schedule --cron`)
 - [ ] WebSocket job client (see 1.7)
 - [ ] Bundle packaging (`.kinpkg`), download, and local cache

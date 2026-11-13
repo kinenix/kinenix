@@ -51,6 +51,7 @@ kinenix actions [web]                             # actions and the parameters e
 kinenix run flows/examples/quote_requests
 kinenix validate flows/examples/quote_requests   # unknown actions and ignored parameters
 kinenix connect http://<hub-ip>:8080   # send this machine's runs to a Hub (asks for and checks the key)
+kinenix-worker service install    # systemd service for the worker (Linux; --dry-run prints the unit)
 kinenix hub            # first run asks setup questions and saves them
 kinenix hub status     # workers and recent executions of a running server
 kinenix hub logs [ID]  # steps of one execution or run id (latest when ID is omitted; --flow NAME for a flow's latest)

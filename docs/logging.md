@@ -52,8 +52,8 @@ Each execution log contains comprehensive runtime and business data:
     "error_type": "Technical",
     "exception_class": "FileNotFoundError",
     "error_message": "Excel file not found: ./assets/challenge.xlsx",
-    "root_cause": "Required file was not found during execution of step 'Read Challenge Excel File'.",
-    "suggested_fix": "Verify the target file path exists and that relative paths are correctly anchored to the flow project directory.",
+    "root_cause": "A file or folder that step 'Read Challenge Excel File' needs was not found: Excel file not found: ./assets/challenge.xlsx",
+    "suggested_fix": "Check the path. A relative path is read from the flow's folder; when an earlier step makes the file, check that it ran and wrote it there.",
     "section": "steps"
   },
   "metrics": {
@@ -91,8 +91,8 @@ Each execution log contains comprehensive runtime and business data:
       "retries": 0,
       "failure": {
         "exception": "FileNotFoundError",
-        "root_cause": "Required file was not found during execution of step 'Read Challenge Excel File'.",
-        "suggested_fix": "Verify the target file path exists ...",
+        "root_cause": "A file or folder that step 'Read Challenge Excel File' needs was not found: ...",
+        "suggested_fix": "Check the path. A relative path is read from the flow's folder; ...",
         "screenshot": "",
         "handled": "stopped",
         "from_subflow": false
@@ -112,7 +112,7 @@ Every step result records where it ran and what happened:
 | `retries` | Retries made before the step succeeded or failed |
 | `failure` | For a failed step: `exception`, `root_cause`, `suggested_fix`, `screenshot`, `handled` (`stopped`, `continued`, `fallback`, `next_item`), and `from_subflow` (true on a `flow.call` step whose subflow failed; the failure itself is recorded on the subflow's step) |
 
-`root_cause` and `suggested_fix` are rule-based, on the worker, without AI. For web actions, Playwright's fixed message patterns are turned into one sentence: what covered the element a click was meant for (and whether it looks like a cookie banner, a popup, or a menu), a selector that never appeared or matches several elements, a site that could not be reached. A failed subflow repeats its own step's diagnosis with where it happened. An unknown message keeps a general wording; the full message is always in `error_message`.
+`root_cause` and `suggested_fix` are rule-based, on the worker, without AI. For web actions, Playwright's fixed message patterns are turned into one sentence: what covered the element a click was meant for (and whether it looks like a cookie banner, a popup, or a menu), a selector that never appeared or matches several elements, a site that could not be reached. The fixed messages of Kinenix's own actions are read the same way (`engine/action_errors.py`): a `web.choose` value that is not among the options names the value and the options the page offers, and `web.get_list` and `web.get_table` errors (no element, fewer rows than `min_rows`, a missing required field or column), an empty parameter, no open browser page, a file that already exists, a file in another encoding, and the HTTP status of `http.request` each get a cause and a fix. A failed subflow repeats its own step's diagnosis with where it happened. An unknown message keeps a general wording that names the step and its line in `flow.md`; the full message is always in `error_message`.
 
 `items` counts work items: the iterations of loops that have an `item_label`, as `{"total": 12, "done": 10, "failed": 1}`; the rest were not reached. A loop without `item_label` is not counted, so loops that only tick options do not inflate the numbers. `items` is `null` when the flow has no such loop.
 
@@ -162,6 +162,15 @@ Every failure in `failure_details.error_type` is classified as either:
 | :--- | :--- | :--- |
 | **Technical** | Timeouts, service outages, selectors not found after retries, missing binaries | RPA developer / DevOps |
 | **Business** | Invalid or inconsistent business data (e.g. invoice total does not match PO) | Business operations |
+
+A business error is not retried (`max_retries` applies only to technical errors) and ends the run with exit code 3; a technical one ends it with exit code 1. A failure is Business when the flow says so: `flow.fail` (its default `category`), `web.get_list` and `web.get_table` with `rule_error: business` (Kinenix 1.1.0), and a business error inside a subflow. Everything else is Technical.
+
+Other RPA tools use the same two types under other names. Where a tool or a developer says "System Exception" or "Application Exception", Kinenix says Technical; `category` of `flow.fail` and `rule_error` accept `system` for `technical` (Kinenix 1.1.0). `${error.type}` and the Hub's `error_type` always say `Technical` or `Business`.
+
+| Kinenix | UiPath | Blue Prism | Automation Anywhere |
+| :--- | :--- | :--- | :--- |
+| Business | Business Exception (`BusinessRuleException`) | Business Exception | Business Exception |
+| Technical | System Exception; Application Exception in Orchestrator queues | System Exception | System Exception |
 
 Handling requirements for each type are defined in `.agents/rules/error_handling.md`.
 

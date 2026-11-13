@@ -2,6 +2,30 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## 1.1.0 (2026-11-13)
+
+Flow data tools: lists, loop control, and error handling for the flows that AI assistants write, and checks that catch their mistakes before a run. It contains everything in 1.1.0rc1 (below) and the changes listed here. Nothing promised in 1.0.0 changes ([docs/compatibility.md](docs/compatibility.md)).
+
+### Upgrading from 1.0.x or 1.1.0rc1
+
+- `kinenix validate` reports more, so a flow that passed before may now fail it: a misspelled `${variable}` with a close defined name (exit code 4), and a missing `> Requires:` for the features of this release. Fix the flow, or declare under `## Variables` a variable that only `--vars` sets. New `Hint:` lines do not change the exit code.
+- A flow that uses a feature of 1.1.0 needs `> Requires: kinenix>=1.1.0`, so older workers refuse it instead of running it wrongly; `kinenix validate` says which features. Flows tested on the release candidate with `kinenix>=1.1.0rc1` keep working; raise them to `kinenix>=1.1.0` once every worker has 1.1.0.
+- A worker installed with pip can now install its service with `kinenix-worker service install`. On a machine whose service was set up by hand, run it once and remove the drop-in files it names.
+
+### Added
+
+- **Batch flow rules for AI assistants** (#150): the new-project template's `AGENTS.md` and the new [docs/batch_flows.md](docs/batch_flows.md) teach five rules, each with a `flow.md` example: an output folder per run (`./output/${run.id}/`), `on_error: next_item` on every step that can fail for one item, `flow.fail` when a run produced nothing, a completion message with the counts and the failed items, and hand-written test pages for JavaScript sites.
+- **`kinenix validate` reports variables that nothing sets** (#162): a `${name}` that no `## Variables`, config key, `output_var`, `logic.set_variable`, `logic.append`, loop variable, or built-in sets. A name close to a defined one is a problem (`${custmer_email} is never set ... Did you mean 'customer_email'?`, exit code 4). Any other name may come from `--vars`, so it is reported on a new `Hint:` line, which does not change the exit code; declaring the name under `## Variables` makes it go away. `kinenix run`, `kinenix compile`, and the worker print the same lines. [docs/cli_guide.md](docs/cli_guide.md#29-check-a-flow-validate) describes the levels `Warning:`, `Hint:`, and `Deprecated:`.
+- **A hint for loops that mix `next_item` with steps that stop the loop** (#151): when some sub-steps of a `logic.loop` use `on_error: next_item`, `kinenix validate` names the other sub-steps that may fail and have no `on_error`, `optional: true`, or `fallback_step_id`, since one bad item would then end the batch. `logic.*`, `flow.return`, `flow.fail`, `web.close`, `file.exists`, and `web.is_visible` are left out. Writing `on_error: fail` on a step says that one failure should stop the run, and the hint goes away. The exit code does not change.
+- **Business errors for web lists** (#146): `rule_error: business` on `web.get_list` and `web.get_table` makes a list that breaks its rules a business error: fewer items than `min_rows` (also none at all), an empty `required_fields` field, or a number field that is not a number. It is not retried, the run ends with exit code 3, and the Hub shows it as Business; a page that does not load stays technical. Together with `error_message`, a flow can say "Category Travel shows no books" without extra steps. [docs/actions_reference.md](docs/actions_reference.md#webget_list) shows how to tell a page that did not load from an empty category.
+- **`system` means `technical`** (#146): `category` of `flow.fail` and `rule_error` accept `system`, the name other RPA tools use. [docs/logging.md](docs/logging.md#3-exception-classification) maps Kinenix's Business and Technical to the names of UiPath, Blue Prism, and Automation Anywhere.
+- **`kinenix-worker service install`** (#153): installs, updates, or (`uninstall`) removes the systemd service for a worker installed with `pip install "kinenix[worker]"` or pipx, which had no way to do it before. The service runs the `kinenix-worker` of the environment the command ran from, in the flows folder (`--working-dir` for another); running it again after an upgrade or a moved venv rewrites the unit. `--dry-run` prints the unit, drop-in files that override it are named, and systems without systemd are told to use Task Scheduler or launchd. `install_service.sh` in a clone now calls it. [kinenix-worker/README.md](kinenix-worker/README.md), section E.
+
+### Changed
+
+- **`kinenix validate` asks for `> Requires:` for more features** (#198): `match` or `search_text` on `web.choose` (0.5.0b1), `fail_on_error: true` on `http.request` and `round()` (1.0.0), and `on_item_error` on `web.get_list` and `web.get_table` (1.1.0), which older workers would run wrongly instead of refusing. [docs/flow_markdown_spec.md](docs/flow_markdown_spec.md) lists every such feature with its version.
+- **Plain causes for action errors** (#219): `root_cause` and `suggested_fix` explain the fixed error messages of Kinenix's own actions instead of a general wording. A `web.choose` value that is not on the page names the value and the options offered ("The value 'CX-30' is not one of the options in step 'Choose Model'. The page offers: CX-3."); `web.get_list` and `web.get_table` errors, empty parameters, no open browser page, files that already exist or use another encoding, and HTTP statuses of `http.request` are covered too. A message no rule knows names the step and its line in `flow.md`, not the step id.
+
 ## 1.1.0rc1 (2026-11-12)
 
 First release candidate of 1.1.0, for trying the new list functions, loop control, and `on_item_error` on real flows. Nothing promised in 1.0.0 changes. A flow that uses these features needs `> Requires: kinenix>=1.1.0rc1` while it is tested on this release candidate (`kinenix>=1.1.0` would refuse it, because 1.1.0rc1 comes before 1.1.0). Still to come in 1.1.0: #146, #150, #151, #153, #162, and #198.

@@ -12,7 +12,7 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [design/expressions.md](design/expressions.md) | Design of expressions in `${...}` and `and` / `or` / `not` in conditions (0.3.0b1) |
 | [design/list-functions.md](design/list-functions.md) | Design of sorting, filtering, totals, and comparisons in `${...}` (1.1.0) |
 | [design/loop-control.md](design/loop-control.md) | Design of `logic.break` and loops with `times` (1.1.0) |
-| [design/agent-interface.md](design/agent-interface.md) | Design of the agent interface: exit codes, `--json`, tools, error codes, safety; foundation in 1.0.0, interface in 1.1.0 |
+| [design/agent-interface.md](design/agent-interface.md) | Design of the agent interface: exit codes, `--json`, tools, error codes, confirmation, flow approval, MCP server, job dispatch; foundation in 1.0.0, the rest in 1.5.0 |
 | [design/threat-model.md](design/threat-model.md) | Threat model of core, worker, and Hub: what is protected, trust assumptions, threats with their milestone, review plan and findings |
 | [design/phase-2.md](design/phase-2.md) | Phase 2 design: On Error and Finally, subflow context, run records for AI questions, Hub tables and views, redaction (proposal) |
 
@@ -23,6 +23,7 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [flow_markdown_spec.md](flow_markdown_spec.md) | `flow.md` syntax, validation, and the compiled form (`kinenix compile`) |
 | [actions_reference.md](actions_reference.md) | Every built-in action with parameters and examples |
 | [project_bundles.md](project_bundles.md) | Bundle layout, `config.json`, `.env`, subflows (`flow.call`), deployment lifecycle, testing against saved pages |
+| [batch_flows.md](batch_flows.md) | Designing a flow that loops over many items unattended: output folder per run, per-item errors, empty results, completion messages, test pages for JavaScript sites |
 | [llms.txt](llms.txt) | For AI assistants: how a flow is built and which pages to read, served as https://www.kinenix.com/llms.txt |
 
 ## Run and Operate

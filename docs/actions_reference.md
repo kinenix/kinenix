@@ -230,6 +230,7 @@ Reads an HTML `<table>` into a list of rows, one dictionary per row keyed by the
 | `add_columns` | dict | No | `{}` | Fixed values added as the first columns of every row, for example the currency a table belongs to |
 | `min_rows` | number | No | `0` | Fail the step when fewer rows are found, so an empty result stops the flow instead of producing an empty report |
 | `on_item_error` | string | No | `fail` | Kinenix 1.1.0. `skip` leaves out a row whose `numeric_columns` value is not a number, instead of failing the step; one warning in the log says how many rows were left out and why. `min_rows` counts the rows that are kept |
+| `rule_error` | string | No | `technical` | Kinenix 1.1.0. `business` makes a table that breaks its rules a business error: fewer rows than `min_rows`, or a `numeric_columns` value that is not a number. It is not retried, the run ends with exit code 3, and the Hub shows it as Business. `system` means `technical`. A table that is not found, or a missing column, stays technical. See the example under `web.get_list` |
 | `timeout` | number | No | `30000` | Milliseconds to wait for the table to exist, and for the content to change after each `next_selector` click |
 | `next_selector` | string | No | - | The "next page" button or link of a paged table (Kinenix 0.4.0b1). It is clicked until it is gone or disabled (`disabled`, `aria-disabled="true"`, or a `disabled` class on it or its parents, as in DataTables and Bootstrap), and the rows of every page are returned in order. Each click waits until the content has changed |
 | `max_pages` | number | No | `20` | The most pages read with `next_selector`. More pages than this fails the step instead of leaving pages out without notice |
@@ -271,6 +272,7 @@ Reads repeated elements, such as product cards or search results, into a list of
 | `add_columns` | dict | No | `{}` | Fixed values added as the first columns of every row, for example the request the results belong to |
 | `min_rows` | number | No | `0` | Fail the step when fewer elements are found; with `on_item_error: skip`, only the items kept count |
 | `on_item_error` | string | No | `fail` | Kinenix 1.1.0. `skip` leaves out an item that has an empty `required_fields` field or a `numeric_fields` field with no number, instead of failing the step and losing every page read so far. One warning in the log says how many items were left out and why (`skipped 2 of 40 item(s): item 14 has no 'title'; ...`), without their content |
+| `rule_error` | string | No | `technical` | Kinenix 1.1.0. `business` makes a list that breaks its rules a business error: fewer items than `min_rows` (also none at all), an empty `required_fields` field, or a `numeric_fields` field with no number. It is not retried (`max_retries` applies only to technical errors), the run ends with exit code 3, and the Hub shows it as Business. `system` means `technical`, as in other RPA tools |
 | `timeout` | number | No | `30000` | Milliseconds to wait for the first element, and for the content to change after each `next_selector` click |
 | `next_selector` | string | No | - | The "next page" or "more" control, as in `web.get_table`; the rows of every page are returned in order |
 | `max_pages` | number | No | `20` | The most pages read with `next_selector`; more fails the step |
@@ -303,6 +305,29 @@ Returns, for example: `[{"request_id": "R001", "name": "Class 1 Plus", "premium"
 - **max_pages:** 50
 - **on_item_error:** skip
 ```
+
+**Example: a page that did not load is technical, an empty category is business (Kinenix 1.1.0):**
+```markdown
+> Requires: kinenix>=1.1.0
+
+### 2. Wait For The Category Page (`web.wait_for`)
+- **selector:** `h1.category-title`
+- **timeout:** 15000
+- **max_retries:** 2
+- **error_message:** The page of category ${cat} did not load
+
+### 3. Read Books (`web.get_list`)
+- **output_var:** `books`
+- **selector:** `article.book`
+- **fields:** {"title": "h3", "price": ".price"}
+- **required_fields:** ["title", "price"]
+- **min_rows:** 1
+- **timeout:** 3000
+- **rule_error:** business
+- **error_message:** Category ${cat} shows no books
+```
+
+The first step waits for something every category page has, empty or not, and retries when the page does not load (technical, exit code 1). Once the page is there, no books or a book without a price is a business error that is not retried (exit code 3). The short `timeout` keeps an empty category from waiting 30 seconds. A changed selector looks like an empty category to the second step; the failure screenshot shows the difference. When the site prints a message such as "No books found", `web.is_visible` on it followed by `flow.fail` tells the two apart for certain. With `on_error: next_item` in a loop over categories, an empty category is recorded as Business and the loop goes on.
 
 A page that does not load still fails the step. To go on after a page that fails, loop over the pages yourself with `logic.loop` and `times`, `on_error: next_item` on the read, and `logic.break` when there is no next page ([logic.loop](#logicloop)).
 
@@ -1421,7 +1446,7 @@ Stops the flow on purpose with a clear message, usually behind a `condition`. Us
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `message` | string | Yes | - | Reason recorded as the error message, in the execution log and the Hub |
-| `category` | string | No | `"business"` | `"business"` (not retried) or `"technical"` |
+| `category` | string | No | `"business"` | `"business"` (not retried) or `"technical"`. `"system"` means `"technical"` (Kinenix 1.1.0), as in other RPA tools |
 
 **Example:**
 ```markdown

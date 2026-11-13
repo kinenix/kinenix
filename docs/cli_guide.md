@@ -155,6 +155,21 @@ kinenix run tiph_quotes
 if ($LASTEXITCODE -eq 3) { Write-Output "The data did not pass; see the run on the Hub" }
 ```
 
+### 2.9 Check a Flow (`validate`)
+`kinenix validate NAME` checks a flow and its subflows without running them ([flow_markdown_spec.md, section 5](flow_markdown_spec.md#5-checking-and-inspecting-a-flow) lists the checks). `kinenix run` and `kinenix compile` print the same lines before they start. Each line starts with its level:
+
+| Level | Meaning | Exit code of `validate` |
+| :--- | :--- | :--- |
+| `Warning:` | A problem: the flow would run wrongly or not at all, for example a misspelled parameter or variable | 4 |
+| `Hint:` | Something that is often a mistake but may be intended, for example a `${name}` that only `--vars` could set, or a loop whose sub-steps use `on_error: next_item` while others stop the whole loop. Fix it, or change the flow as the hint says to make it go away | 0 |
+| `Deprecated:` | Still works in 1.x, but Kinenix 2.0 removes it | 0 |
+
+```text
+Warning: Step 'step_1' (Build Subject), line 9: ${custmer_email} is never set, so it is empty when the step runs. Did you mean 'customer_email'?
+Hint: Step 'step_1' (Build Subject), line 9: ${report_date} is not set anywhere in the flow, so it is empty unless the run gets it from --vars. If it does, declare it under ## Variables (for example "- `report_date`:") so this hint goes away.
+Hint: Step 'step_3' (Quote Each Vehicle), line 21: 2 sub-steps that may fail stop the whole loop when they fail ('Open Page' line 30, 'Choose Model' line 33), while 'Check Row' line 23 uses on_error: next_item. Add on_error: next_item to the steps that may fail for one item, or write on_error: fail on those where one failure should stop the run.
+```
+
 ---
 
 ## 3. Command Options & Parameters
@@ -166,7 +181,7 @@ Pass external variables or runtime overrides to a flow as a JSON string:
 kinenix run quote_requests --vars "{\"config\": {\"dry_run\": true}}"
 ```
 
-Inside the flow, these variables can be accessed using the standard expression syntax `${target_url}`.
+Inside the flow, these variables can be accessed using the standard expression syntax `${target_url}`. Declare each variable the flow expects from `--vars` under `## Variables`, with a default or empty (`` - `report_date`: ``): readers see what the flow takes, and `kinenix validate` does not report the name as never set.
 
 **Another settings file for one run (`--config`):** the keys of the file replace the same keys of `config/config.json`, for example to point a flow at saved pages for a test ([project_bundles.md, Testing Against Saved Pages](project_bundles.md#4-testing-against-saved-pages)). The path is relative to the current folder or the flow's folder:
 

@@ -20,7 +20,7 @@ Rules that every change must respect. For how the system is structured today and
 - `kinenix-core` must stay lean: it must run non-AI flows without any ML runtime installed. AI integrations are optional sidecars reached over HTTP.
 - Actions must not depend on GUI frameworks.
 - AI copilot and diagnostic tools must run as detached sidecar services or optional add-ons.
-- New and changed CLI commands keep their logic in functions that return data; `cli.py` only parses arguments and prints. The MCP server and `kinenix ask` will call the same functions (`docs/design/agent-interface.md`, section 10).
+- New and changed CLI commands keep their logic in functions that return data; `cli.py` only parses arguments and prints. The MCP server (`kinenix mcp`) will call the same functions (`docs/design/agent-interface.md`, section 10).
 - From 0.4.0b1, every action declares its side-effect kind (`email`, `files`, `web`, `network`, or `none`), so a run can be described and confirmed before it starts.
 
 ---

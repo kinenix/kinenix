@@ -95,7 +95,11 @@ def test_repository_flows_are_valid(path, monkeypatch):
         data = json.loads(path.read_text(encoding="utf-8-sig"))
         if "steps" not in data:
             pytest.skip("not a flow definition")
-    assert validate_flow(load_flow(path)) == []
+    # Checked in their bundle, so ${names} are checked too (#162): no misspellings, and no hints either
+    bundle = path.parent.parent if path.parent.name == "subflows" else path.parent
+    hints = []
+    assert validate_flow(load_flow(path), bundle, hints) == []
+    assert hints == []
 
 
 def test_every_action_declares_its_side_effects():

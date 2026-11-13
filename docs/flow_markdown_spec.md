@@ -49,6 +49,17 @@ Every `flow.md` must start with a Level 1 Heading (`#`) denoting the Flow Name, 
 
 `> Requires:` is optional. A Kinenix older than the version named refuses to run the flow with a message to upgrade. Flows that use `## On Error` or `## Finally` need `> Requires: kinenix>=0.2.0b4` (section 3.2).
 
+`kinenix validate` reports a missing or too low `> Requires:` when the flow uses something an older Kinenix would run wrongly instead of refusing, and names the version to require:
+
+| Version | Features |
+| :--- | :--- |
+| 0.2.0b4 | `## On Error`, `## Finally`, `inherit_config` on `flow.call` |
+| 0.3.0b1 | Expressions in `${...}`, `and` / `or` / `not` in conditions |
+| 0.4.0b1 | `on_error: next_item` |
+| 0.5.0b1 | `match` or `search_text` on `web.choose` |
+| 1.0.0 | `fail_on_error: true` on `http.request`, `round()` (halves round away from zero) |
+| 1.1.0 | List functions and comparisons in `${...}`, `logic.break`, `logic.next`, `times` on `logic.loop`, `on_error: ignore`, `error_message`, `on_item_error` and `rule_error` on `web.get_list` and `web.get_table`, `category: system` on `flow.fail` |
+
 #### Example
 ```markdown
 # RPA Challenge Solver
@@ -236,6 +247,8 @@ Dynamic variables must use the standard expression format:
 - **`${error.*}`** and **`${run.*}`**: The last failure and the current run (section 3.3).
 - **`${__flow_dir__}`**: The absolute path of the flow's bundle folder. Relative paths in file actions already resolve against it; use it to build an absolute path, for example to pass a file location to a subflow: `"${__flow_dir__}/output/report.csv"`.
 
+A variable that nothing sets is empty, so a misspelled name does not stop the run. `kinenix validate` checks every `${name}` against what can set it: `## Variables`, the keys of the config files in `config/` (each is also a variable of its own), `output_var`, `logic.set_variable`, `logic.append`, the `outputs` of `flow.call`, a loop's `item_var` and `<item_var>_index`, and `run`, `error`, `config`, `env`, and the `trigger_*` variables of the worker. A name close to one of those is a problem (`Did you mean 'customer_email'?`); any other is a hint, because it may come from `--vars`. Declare the variables a flow takes from `--vars` under `## Variables`, empty if they have no default, and the hint goes away.
+
 #### Expressions (Kinenix 0.3.0b1 and newer)
 
 Inside `${...}`, a value can also be calculated: counted, joined, cleaned, picked from a list, or computed. Nothing written in a flow can run code; only the functions and operators below exist. Design: [design/expressions.md](design/expressions.md).
@@ -368,6 +381,8 @@ Any step can retry and then decide what happens:
 
 With nested loops, `next_item` ends the item of the innermost loop. In a subflow called for each item, set `next_item` on the `flow.call` step in the loop; the subflow's own steps are not inside that loop.
 
+A sub-step without `on_error` still stops the whole loop and the flow when it fails. When some sub-steps of a loop use `next_item`, `kinenix validate` prints a hint for the other sub-steps that may fail and have no `on_error`, `optional: true`, or `fallback_step_id`: one bad item would then end the batch, usually by mistake. Steps that do not fail because of one item's data are left out: the `logic.*` actions, `flow.return`, `flow.fail`, `web.close`, `file.exists`, and `web.is_visible`. Add `on_error: next_item` to the steps that may fail for one item. Where one failure should stop the run (a login that fails, for example), write `on_error: fail`: it behaves like the default, but says it is meant, and the hint goes away. The hint does not change the exit code ([cli_guide.md, section 2.9](cli_guide.md#29-check-a-flow-validate)).
+
 For a step that may fail without it mattering, `ignore` keeps the run clean:
 
 ```markdown
@@ -466,7 +481,7 @@ A failing step inside On Error or Finally is recorded and the rest of that secti
 | Field | Example |
 | :--- | :--- |
 | `${error.message}` | `Timeout 30000ms exceeded waiting for role=option[name='HONDA']` |
-| `${error.type}` | `Technical` or `Business` |
+| `${error.type}` | `Technical` or `Business`; what other RPA tools call a System or Application Exception is `Technical` ([logging.md, section 3](logging.md#3-exception-classification)) |
 | `${error.step_id}`, `${error.step_name}`, `${error.action}` | `sub_step_3_1`, `Choose Brand`, `web.click` |
 | `${error.path}` | `TIPH Quotes > Each Request > process_one > Choose Brand` (loops, conditions, and subflows on the way) |
 | `${error.subflow}` | `process_one`, or empty |
@@ -570,7 +585,7 @@ Below is a complete `flow.md`: an earlier version of the **RPA Challenge Solver*
    ```bash
    kinenix validate flows/examples/quote_requests         # exit code 4 when problems are found
    ```
-   Each action declares the parameters it reads. `kinenix validate`, `kinenix run`, and `kinenix-worker run` report unknown actions, parameters that no action reads (which would otherwise be ignored silently), lines the parser ignores, step headings without an action, and a flow without steps, and suggest the closest name (for example `timout` -> `timeout`). They also follow `flow.call` targets into subflows. `run` only warns, except that a flow without steps does not run. The `kinenix-core` test suite validates every flow under `flows/` and every example in `docs/`.
+   Each action declares the parameters it reads. `kinenix validate`, `kinenix run`, and `kinenix-worker run` report unknown actions, parameters that no action reads (which would otherwise be ignored silently), lines the parser ignores, step headings without an action, and a flow without steps, and suggest the closest name (for example `timout` -> `timeout`). They also report `${names}` that nothing sets (Rule 5), and follow `flow.call` targets into subflows. `run` only warns, except that a flow without steps does not run. Lines starting with `Hint:` are not problems and do not change the exit code ([cli_guide.md, section 2.9](cli_guide.md#29-check-a-flow-validate)). The `kinenix-core` test suite validates every flow under `flows/` and every example in `docs/`.
 2. **Compiled form (for inspection):**
    ```bash
    kinenix compile flows/examples/quote_requests                   # print the compiled flow as JSON

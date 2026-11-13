@@ -5,8 +5,9 @@ its default, which is hard to notice. These checks only report; callers decide w
 """
 import ast
 import difflib
+import json
 from pathlib import Path
-from typing import Any, Iterable, List, Optional, Set
+from typing import Any, Iterable, List, Optional, Set, Tuple
 
 from .. import actions  # noqa: F401  (imports every action module so the registry is complete)
 from ..actions.registry import ActionRegistry
@@ -83,14 +84,29 @@ NEWER_FEATURES = {
     "expressions in ${...}": ("0.3.0b1", "0.2.0b4", "turns expressions such as ${len(rows)} into empty text"),
     "and / or / not in conditions": ("0.3.0b1", "0.2.0b4", "reads and / or / not as part of a value"),
     "on_error: next_item": ("0.4.0b1", "0.3.0b1", "stops the flow at a step with on_error: next_item"),
+    "match or search_text on web.choose": (
+        "0.5.0b1", "0.4.0b1", "ignores match and search_text, so an option written differently from the site is not found"),
+    "fail_on_error on http.request": (
+        "1.0.0", "1.0.0rc2", "ignores fail_on_error and takes an HTTP status of 400 or higher as a success"),
+    "round() on halves": ("1.0.0", "1.0.0rc2", "rounds halves to the even number, so round(2.5) gives 2, not 3"),
     "on_error: ignore": ("1.1.0", "1.0.1", "stops the flow at a step with on_error: ignore"),
     "error_message": ("1.1.0", "1.0.1", "ignores error_message and reports the action's own message"),
     "logic.break": ("1.1.0", "1.0.1", "stops the flow at logic.break as an unknown action"),
     "logic.next": ("1.1.0", "1.0.1", "stops the flow at logic.next as an unknown action"),
     "times on logic.loop": ("1.1.0", "1.0.1", "runs a loop with times and no items zero times, without a warning"),
     "list functions and comparisons in ${...}": (
-        "1.1.0", "1.0.1", "stop the step at sort_by, where, sum, and comparisons, and read ${a and b} as empty text"),
+        "1.1.0", "1.0.1", "stops the step at sort_by, where, sum, and comparisons, and reads ${a and b} as empty text"),
+    "on_item_error on web.get_list or web.get_table": (
+        "1.1.0", "1.0.1", "ignores on_item_error and stops the step at the first item with a missing field or a "
+                          "value that is not a number"),
+    "rule_error on web.get_list or web.get_table": ("1.1.0", "1.0.1",
+                                                    "ignores rule_error and retries a list that breaks min_rows or "
+                                                    "required_fields as a technical error"),
+    "category: system on flow.fail": ("1.1.0", "1.0.1",
+                                      "stops with an error about the category instead of the flow's message"),
 }
+
+_FALSE_TEXT = ("false", "no", "0", "off")
 
 # Functions added in 1.1.0 (docs/design/list-functions.md)
 LIST_FUNCTIONS = {"sort_by", "where", "column", "sum", "min", "max", "average", "unique", "first", "last",
@@ -126,6 +142,22 @@ def _uses_expressions(steps: List[Step]) -> bool:
                         return True
                 except expressions.ExpressionError:
                     pass
+    return False
+
+
+def _calls(steps: List[Step], name: str) -> bool:
+    """A ${...} expression of these steps calls the function name()."""
+    for step in steps:
+        for text in _placeholders([step.parameters, step.condition]):
+            if text.startswith("env.") or expressions.problem(text) is not None:
+                continue
+            try:
+                tree = expressions.parse(text)
+            except expressions.ExpressionError:
+                continue
+            if any(isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == name
+                   for node in ast.walk(tree)):
+                return True
     return False
 
 
@@ -182,6 +214,20 @@ def _newer_features(flow: FlowDefinition) -> List[str]:
         used.append("on_error: ignore")
     if any(s.error_handler and s.error_handler.error_message for s in steps):
         used.append("error_message")
+    if any(s.action == "web.choose" and ("match" in s.parameters or "search_text" in s.parameters) for s in steps):
+        used.append("match or search_text on web.choose")
+    # fail_on_error: false is what older versions did anyway; only true asks for a newer worker
+    if any(s.action == "http.request" and "fail_on_error" in s.parameters
+           and str(s.parameters["fail_on_error"]).strip().lower() not in _FALSE_TEXT for s in steps):
+        used.append("fail_on_error on http.request")
+    if _calls(steps, "round"):
+        used.append("round() on halves")
+    if any(s.action in ("web.get_list", "web.get_table") and "on_item_error" in s.parameters for s in steps):
+        used.append("on_item_error on web.get_list or web.get_table")
+    if any(s.action in ("web.get_list", "web.get_table") and "rule_error" in s.parameters for s in steps):
+        used.append("rule_error on web.get_list or web.get_table")
+    if any(s.action == "flow.fail" and str(s.parameters.get("category", "")).strip().lower() == "system" for s in steps):
+        used.append("category: system on flow.fail")
     return used
 
 
@@ -245,8 +291,175 @@ def _ignored_error_handler(step: Step) -> Optional[str]:
     return f"{', '.join(keys)} has no effect on {step.action}. {hint}"
 
 
-def validate_flow(flow: FlowDefinition) -> List[str]:
-    """Return human-readable problems found in the flow; an empty list means none."""
+# Variables every run has, or that the CLI and the worker's triggers set (#162)
+BUILT_IN_VARIABLES = {"run", "error", "config", "env", "hub_url", "worker_id",
+                      "trigger_type", "trigger_timestamp", "trigger_file_path", "trigger_file_name"}
+# How close a name must be to a defined one to count as a misspelling of it
+_TYPO_CUTOFF = 0.75
+
+
+def config_names(flow_dir: Path) -> Set[str]:
+    """Top-level keys of the bundle's config files: each one is also a variable of its own (config.x and x)."""
+    names: Set[str] = set()
+    config = flow_dir / "config"
+    files = [flow_dir / "config.json", flow_dir / "config.template.json"]
+    files += sorted(config.glob("*.json")) if config.is_dir() else []
+    for path in files:
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(data, dict):
+            names.update(str(key) for key in data)
+    if names & {"website", "target_url"}:
+        names |= {"website", "target_url"}  # the interpreter sets each from the other
+    return names
+
+
+def _first_name(text: Any) -> Optional[str]:
+    if not isinstance(text, str):
+        return None
+    name = text.strip().strip("`").split(".")[0].strip()
+    return name if name.isidentifier() and "${" not in text else None
+
+
+def _defined_names(flow: FlowDefinition) -> Set[str]:
+    """Names the flow itself can set: ## Variables, output_var, logic.set_variable, logic.append, flow.call
+    outputs, and loop item variables."""
+    names = set(flow.variables or {})
+    for step in _walk(_all_steps(flow)):
+        params = step.parameters
+        names.add(_first_name(step.output_var))
+        if step.action == "logic.set_variable":
+            names.add(_first_name(params.get("name")))
+        elif step.action == "logic.append":
+            names.add(_first_name(params.get("target") or params.get("var_name") or params.get("list_var")))
+        elif step.action == "flow.call" and isinstance(params.get("outputs"), dict):
+            names.update(_first_name(value) for value in params["outputs"].values())
+        elif step.action == "logic.loop":
+            item_var = _first_name(params.get("item_var", "item"))
+            if item_var:
+                names |= {item_var, f"{item_var}_index"}
+    names.discard(None)
+    return names
+
+
+def _names_used(text: str) -> List[str]:
+    """The variable names a ${...} text reads: every name of an expression except called functions, or the
+    first part of a lookup such as `row.First Name`."""
+    if text.startswith("env."):
+        return []
+    try:
+        tree = expressions.parse(text)
+    except expressions.ExpressionError:
+        tree = None
+    # Words without symbols, such as `row.Terms and Conditions`, are read as a lookup first, as at run time
+    if tree is not None and not expressions.is_plain_path(tree) and expressions.means_expression(text):
+        called = {id(node.func) for node in ast.walk(tree) if isinstance(node, ast.Call)}
+        found = [node.id for node in ast.walk(tree) if isinstance(node, ast.Name) and id(node) not in called]
+    else:
+        found = [text.split(".")[0].strip()]
+    return [name for name in dict.fromkeys(found) if name.isidentifier() and not name.startswith("_")]
+
+
+def _variable_findings(flow: FlowDefinition, flow_dir: Path) -> Tuple[List[str], List[str]]:
+    """
+    ${...} names that nothing in the flow, its config, or Kinenix sets (#162), as (problems, hints). A name close
+    to a defined one is a misspelling, so a problem. Any other may come from --vars, so a hint: declaring it
+    under ## Variables makes the hint go away.
+    """
+    defined = _defined_names(flow) | BUILT_IN_VARIABLES | config_names(flow_dir)
+    uses = {}
+    for step in _walk(_all_steps(flow)):
+        texts = [step.parameters, step.condition, step.error_handler.error_message if step.error_handler else None]
+        for text in _placeholders(texts):
+            for name in _names_used(text):
+                if name not in defined:
+                    uses.setdefault(name, []).append(step)
+    problems, hints = [], []
+    for name, steps in uses.items():
+        steps = list({id(s): s for s in steps}.values())
+        step = steps[0]
+        where = f"Step '{step.id}' ({step.name}){f', line {step.line}' if step.line else ''}"
+        also = f" It is also used in {len(steps) - 1} other step(s)." if len(steps) > 1 else ""
+        close = difflib.get_close_matches(name, defined, n=1, cutoff=_TYPO_CUTOFF)
+        if close:
+            problems.append(f"{where}: ${{{name}}} is never set, so it is empty when the step runs. "
+                            f"Did you mean '{close[0]}'?{also}")
+        else:
+            hints.append(f"{where}: ${{{name}}} is not set anywhere in the flow, so it is empty unless the run "
+                         f"gets it from --vars. If it does, declare it under ## Variables (for example "
+                         f"\"- `{name}`:\") so this hint goes away.{also}")
+    return problems, hints
+
+
+# Actions that do not fail because of one item's data: they never need an error policy in a loop (#151).
+# flow.fail fails on purpose; without on_error it is meant to stop the run
+CANNOT_FAIL_FOR_AN_ITEM = {"logic.set_variable", "logic.append", "logic.delay", "logic.if", "logic.loop",
+                           "logic.break", "logic.next", "flow.return", "flow.fail", "web.close", "file.exists",
+                           "web.is_visible"}
+
+
+def _loop_body(steps: Iterable[Step]) -> Iterable[Step]:
+    """The steps one iteration runs: sub-steps and logic.if branches, but not the inside of a nested loop."""
+    for step in steps or []:
+        yield step
+        if step.action == "logic.if":
+            yield from _loop_body(step.sub_steps)
+            yield from _loop_body(step.else_steps)
+
+
+def _has_error_policy(step: Step) -> bool:
+    """on_error written on the step (on_error: fail too: the author decided), optional, or fallback_step_id."""
+    handler = step.error_handler
+    if handler and ("on_error" in handler.model_fields_set or handler.fallback_step_id):
+        return True
+    return str(step.parameters.get("optional", "")).strip().lower() in ("true", "yes", "1")
+
+
+def _at(step: Step) -> str:
+    return f"'{step.name}'{f' line {step.line}' if step.line else ''}"
+
+
+def _loop_hints(flow: FlowDefinition) -> List[str]:
+    """
+    A loop with sub-steps on on_error: next_item and others that may fail without an error policy (#151): one
+    bad item then stops the whole loop, usually by mistake.
+    """
+    hints = []
+    for loop in _walk(_all_steps(flow)):
+        if loop.action != "logic.loop":
+            continue
+        body = list(_loop_body(loop.sub_steps))
+        skipping = [s for s in body if _on_error(s) == "next_item"]
+        stopping = [s for s in body if s.action not in CANNOT_FAIL_FOR_AN_ITEM and not _has_error_policy(s)]
+        if not skipping or not stopping:
+            continue
+        listed = ", ".join(_at(s) for s in stopping[:3])
+        more = f", and {len(stopping) - 3} more" if len(stopping) > 3 else ""
+        users = " and ".join(_at(s) for s in skipping[:2]) + (" and others" if len(skipping) > 2 else "")
+        count = (f"{len(stopping)} sub-steps that may fail stop the whole loop when they fail" if len(stopping) > 1
+                 else "1 sub-step that may fail stops the whole loop when it fails")
+        hints.append(
+            f"Step '{loop.id}' ({loop.name}){f', line {loop.line}' if loop.line else ''}: {count} "
+            f"({listed}{more}), while {users} {'uses' if len(skipping) == 1 else 'use'} "
+            f"on_error: next_item. Add on_error: next_item to the steps that may fail for one item, or write "
+            f"on_error: fail on those where one failure should stop the run.")
+    return hints
+
+
+def validate_flow(flow: FlowDefinition, flow_dir: Optional[Path] = None,
+                  hints: Optional[List[str]] = None) -> List[str]:
+    """
+    Return human-readable problems found in the flow; an empty list means none.
+
+    With flow_dir, the bundle folder whose config the flow reads, it also checks that every ${name} is set
+    somewhere. When a list is given, hints receives what is often a mistake but may be intended: a name only
+    --vars could set, a loop that mixes on_error: next_item with steps that stop it. Hints are not problems:
+    kinenix validate prints them without failing.
+    """
     issues: List[str] = []
     known_actions = ActionRegistry.list_actions()
 
@@ -310,6 +523,14 @@ def validate_flow(flow: FlowDefinition) -> List[str]:
             close = difflib.get_close_matches(key, accepted, n=1)
             hint = f" Did you mean '{close[0]}'?" if close else f" Accepted: {', '.join(accepted) or 'none'}."
             issues.append(f"{where}: {step.action} does not use parameter '{key}'; it would be ignored.{hint}")
+
+    if flow_dir is not None:
+        problems, found = _variable_findings(flow, flow_dir)
+        issues.extend(problems)
+        if hints is not None:
+            hints.extend(found)
+    if hints is not None:
+        hints.extend(_loop_hints(flow))
     return issues
 
 
@@ -324,11 +545,12 @@ class _BundleVariables:
 
 
 def validate_subflows(flow: FlowDefinition, flow_dir: Path, flow_file_dir: Optional[Path] = None,
-                      _seen: Optional[Set[Path]] = None) -> List[str]:
+                      _seen: Optional[Set[Path]] = None, hints: Optional[List[str]] = None) -> List[str]:
     """
     Follows every flow.call whose target is a fixed path, and reports problems in the subflows:
     files that cannot be found, the subflow's own problems (including lines a .md subflow ignores),
     and `inputs` the subflow does not declare in its ## Variables. Targets built from ${...} are skipped.
+    The subflows' hints are added to hints when a list is given.
     """
     from .interpreter import is_shared_subflow, load_subflow, resolve_subflow_path
     from .markdown import markdown_issues
@@ -371,8 +593,11 @@ def validate_subflows(flow: FlowDefinition, flow_dir: Path, flow_file_dir: Optio
         prefix = f"Subflow '{target}': "
         if path.suffix.lower() == ".md":
             issues.extend(prefix + issue for issue in markdown_issues(path.read_text(encoding="utf-8-sig")))
-        issues.extend(prefix + issue for issue in validate_flow(child))
         shared = is_shared_subflow(target, path, _BundleVariables(flow_dir, flow_file_dir))
         child_dir = path.parent if shared else flow_dir
-        issues.extend(validate_subflows(child, child_dir, path.parent, seen))
+        child_hints: List[str] = []
+        issues.extend(prefix + issue for issue in validate_flow(child, child_dir, child_hints))
+        if hints is not None:
+            hints.extend(prefix + hint for hint in child_hints)
+        issues.extend(validate_subflows(child, child_dir, path.parent, seen, hints))
     return issues

@@ -1,5 +1,6 @@
 import argparse
 import json
+import subprocess  # nosec B404: only for CalledProcessError from kinenix_worker.service
 import sys
 
 from kinenix import exit_codes
@@ -62,11 +63,45 @@ def main():
     daemon_parser = subparsers.add_parser("daemon", help="Run multi-trigger daemon using a configuration file")
     daemon_parser.add_argument("--config", default="triggers.json", help="Path to triggers.json configuration file")
 
+    # Command: service
+    service_parser = subparsers.add_parser("service", help="Install or remove the systemd service (Linux)")
+    service_sub = service_parser.add_subparsers(dest="service_command")
+    install_parser = service_sub.add_parser(
+        "install", help="Install or update the service and start it; run it again after an upgrade or a venv move")
+    install_parser.add_argument("--working-dir", default=None,
+                                help="Folder the service runs in, against which relative paths in triggers.json "
+                                     "resolve (default: the flows folder, `kinenix flows-dir`)")
+    install_parser.add_argument("--dry-run", action="store_true", help="Print the unit file without installing it")
+    service_sub.add_parser("uninstall", help="Stop and remove the service; ~/.kinenix is kept")
+
     args = parser.parse_args()
 
     if not args.command:
         parser.print_help()
         sys.exit(0)
+
+    if args.command == "service":
+        from .service import ServiceError, drop_in_warning, install, uninstall
+        if not args.service_command:
+            service_parser.print_help()
+            sys.exit(exit_codes.USAGE)
+        try:
+            if args.service_command == "uninstall":
+                uninstall()
+            elif args.dry_run:
+                print(install(args.working_dir, dry_run=True), end="")
+                warning = drop_in_warning()
+                if warning:
+                    print(warning, file=sys.stderr)
+            else:
+                install(args.working_dir)
+        except ServiceError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(exit_codes.USAGE)
+        except subprocess.CalledProcessError as e:
+            print(f"Error: {' '.join(e.cmd)} failed with exit code {e.returncode}.", file=sys.stderr)
+            sys.exit(exit_codes.TECHNICAL)
+        sys.exit(exit_codes.OK)
 
     console = Console()
     client = HubClient()
