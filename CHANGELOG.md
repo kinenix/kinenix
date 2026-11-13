@@ -2,7 +2,15 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
-## Unreleased
+## 1.1.0 (2026-11-13)
+
+Flow data tools: lists, loop control, and error handling for the flows that AI assistants write, and checks that catch their mistakes before a run. It contains everything in 1.1.0rc1 (below) and the changes listed here. Nothing promised in 1.0.0 changes ([docs/compatibility.md](docs/compatibility.md)).
+
+### Upgrading from 1.0.x or 1.1.0rc1
+
+- `kinenix validate` reports more, so a flow that passed before may now fail it: a misspelled `${variable}` with a close defined name (exit code 4), and a missing `> Requires:` for the features of this release. Fix the flow, or declare under `## Variables` a variable that only `--vars` sets. New `Hint:` lines do not change the exit code.
+- A flow that uses a feature of 1.1.0 needs `> Requires: kinenix>=1.1.0`, so older workers refuse it instead of running it wrongly; `kinenix validate` says which features. Flows tested on the release candidate with `kinenix>=1.1.0rc1` keep working; raise them to `kinenix>=1.1.0` once every worker has 1.1.0.
+- A worker installed with pip can now install its service with `kinenix-worker service install`. On a machine whose service was set up by hand, run it once and remove the drop-in files it names.
 
 ### Added
 
