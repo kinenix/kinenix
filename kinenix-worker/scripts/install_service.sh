@@ -8,6 +8,8 @@
 # Run as the user that owns the Kinenix checkout (not as root); sudo is used where needed.
 # The service runs `kinenix-worker daemon` as that user, starts at boot, and restarts on failure.
 #
+# With pip install "kinenix[worker]", run `kinenix-worker service install` instead; this script calls it.
+#
 # Per-user files (created if missing, never overwritten):
 #   ~/.kinenix/worker.env      KINENIX_HUB_URL, KINENIX_HUB_API_KEY, KINENIX_WORKER_ID
 #   ~/.kinenix/triggers.json   triggers for the daemon; empty means heartbeats only
@@ -37,67 +39,12 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WORKER_BIN="$REPO_ROOT/.venv/bin/kinenix-worker"
-RUN_USER="$(id -un)"
-CONFIG_DIR="$HOME/.kinenix"
-ENV_FILE="$CONFIG_DIR/worker.env"
-TRIGGERS_FILE="$CONFIG_DIR/triggers.json"
 
 if [ ! -x "$WORKER_BIN" ]; then
     echo "ERROR: $WORKER_BIN not found. Run kinenix-worker/scripts/setup_rpi.sh first." >&2
     exit 1
 fi
 
-mkdir -p "$CONFIG_DIR"
-
-if [ ! -f "$ENV_FILE" ]; then
-    cat > "$ENV_FILE" <<'EOF'
-# Kinenix Worker settings, loaded by the kinenix-worker service and by your shell.
-# Connect to the Hub with `kinenix connect http://<hub-ip>:8080` (saved in ~/.kinenix/kinenix.env),
-# or fill in the URL and key here; values here take precedence. Then: sudo systemctl restart kinenix-worker
-export KINENIX_HUB_URL=
-export KINENIX_HUB_API_KEY=
-export KINENIX_WORKER_ID=$(hostname)
-EOF
-    echo "Created $ENV_FILE (edit it to connect to the Hub)."
-fi
-chmod 600 "$ENV_FILE"
-
-if [ ! -f "$TRIGGERS_FILE" ]; then
-    cat > "$TRIGGERS_FILE" <<'EOF'
-{
-  "triggers": []
-}
-EOF
-    echo "Created $TRIGGERS_FILE (no triggers yet: the worker only sends heartbeats)."
-fi
-
-# worker.env is sourced by bash so it can keep the `export` lines that a login shell also uses
-sudo tee "$UNIT_PATH" >/dev/null <<EOF
-[Unit]
-Description=Kinenix Worker (unattended RPA daemon)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=$RUN_USER
-WorkingDirectory=$REPO_ROOT
-Environment=PYTHONUNBUFFERED=1
-ExecStart=/bin/bash -c 'if [ -f "$ENV_FILE" ]; then . "$ENV_FILE"; fi; exec "$WORKER_BIN" daemon --config "$TRIGGERS_FILE"'
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable "$SERVICE_NAME" >/dev/null
-sudo systemctl restart "$SERVICE_NAME"
-
-echo ""
-echo "Service '$SERVICE_NAME' installed and started (runs as $RUN_USER, starts at boot)."
-echo "  Status:   systemctl status $SERVICE_NAME"
-echo "  Logs:     journalctl -u $SERVICE_NAME -f"
-echo "  Restart:  sudo systemctl restart $SERVICE_NAME   (after editing worker.env or triggers.json)"
-echo "  Remove:   $SCRIPT_DIR/install_service.sh --uninstall"
+# The same unit as `kinenix-worker service install` after a pip install (#153), run from the repository folder,
+# so relative paths in triggers.json keep resolving against it
+exec "$WORKER_BIN" service install --working-dir "$REPO_ROOT"
