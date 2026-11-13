@@ -161,12 +161,13 @@ if ($LASTEXITCODE -eq 3) { Write-Output "The data did not pass; see the run on t
 | Level | Meaning | Exit code of `validate` |
 | :--- | :--- | :--- |
 | `Warning:` | A problem: the flow would run wrongly or not at all, for example a misspelled parameter or variable | 4 |
-| `Hint:` | Something that is often a mistake but may be intended, for example a `${name}` that only `--vars` could set. Fix it, or change the flow as the hint says to make it go away | 0 |
+| `Hint:` | Something that is often a mistake but may be intended, for example a `${name}` that only `--vars` could set, or a loop whose sub-steps use `on_error: next_item` while others stop the whole loop. Fix it, or change the flow as the hint says to make it go away | 0 |
 | `Deprecated:` | Still works in 1.x, but Kinenix 2.0 removes it | 0 |
 
 ```text
 Warning: Step 'step_1' (Build Subject), line 9: ${custmer_email} is never set, so it is empty when the step runs. Did you mean 'customer_email'?
 Hint: Step 'step_1' (Build Subject), line 9: ${report_date} is not set anywhere in the flow, so it is empty unless the run gets it from --vars. If it does, declare it under ## Variables (for example "- `report_date`:") so this hint goes away.
+Hint: Step 'step_3' (Quote Each Vehicle), line 21: 2 sub-steps that may fail stop the whole loop when they fail ('Open Page' line 30, 'Choose Model' line 33), while 'Check Row' line 23 uses on_error: next_item. Add on_error: next_item to the steps that may fail for one item, or write on_error: fail on those where one failure should stop the run.
 ```
 
 ---

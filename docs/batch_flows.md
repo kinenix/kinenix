@@ -58,7 +58,7 @@ Put the steps for one item in a subflow, call it with `on_error: continue`, and 
     - **item:** {"request_id": "${req.request_id}", "reason": "${default(error.root_cause, error.message)}"}
 ```
 
-Reset the result before each call: a failed call does not set `output_var`, so the previous item's result would be read. `kinenix validate` cannot tell which failures should stop the run; only the requirements say that one failure must stop everything (for example a login that fails).
+Reset the result before each call: a failed call does not set `output_var`, so the previous item's result would be read. `kinenix validate` cannot tell which failures should stop the run; only the requirements say that one failure must stop everything (for example a login that fails). When some sub-steps of a loop use `next_item`, it prints a hint for the others that may fail without an `on_error`; write `on_error: fail` on the ones that should stop the run, and the hint goes away.
 
 ## 3. A run that produced nothing does not end as a success
 

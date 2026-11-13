@@ -381,6 +381,8 @@ Any step can retry and then decide what happens:
 
 With nested loops, `next_item` ends the item of the innermost loop. In a subflow called for each item, set `next_item` on the `flow.call` step in the loop; the subflow's own steps are not inside that loop.
 
+A sub-step without `on_error` still stops the whole loop and the flow when it fails. When some sub-steps of a loop use `next_item`, `kinenix validate` prints a hint for the other sub-steps that may fail and have no `on_error`, `optional: true`, or `fallback_step_id`: one bad item would then end the batch, usually by mistake. Steps that do not fail because of one item's data are left out: the `logic.*` actions, `flow.return`, `flow.fail`, `web.close`, `file.exists`, and `web.is_visible`. Add `on_error: next_item` to the steps that may fail for one item. Where one failure should stop the run (a login that fails, for example), write `on_error: fail`: it behaves like the default, but says it is meant, and the hint goes away. The hint does not change the exit code ([cli_guide.md, section 2.9](cli_guide.md#29-check-a-flow-validate)).
+
 For a step that may fail without it mattering, `ignore` keeps the run clean:
 
 ```markdown
