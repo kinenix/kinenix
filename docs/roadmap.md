@@ -132,7 +132,7 @@ Release:
 **Exit criteria**
 
 Before the release candidate:
-- [x] `docs/compatibility.md`: what stays stable for all of 1.x (`flow.md` syntax, action names and parameters, CLI commands, exit codes, `--json` output and its JSON Schemas once they exist, Hub API and views, settings files) and what may still change (text meant for people, Studio, ask router)
+- [x] `docs/compatibility.md`: what stays stable for all of 1.x (`flow.md` syntax, action names and parameters, CLI commands, exit codes, `--json` output and its JSON Schemas once they exist, Hub API and views, settings files) and what may still change (text meant for people, Studio)
 - [x] Exit codes with a meaning ([design/agent-interface.md](design/agent-interface.md), section 4) for `kinenix run`, `validate`, `connect`, and `kinenix hub ...`: technical failure, wrong use, business rule, invalid flow, newer Kinenix needed, Hub unreachable, not found, partial run
 - [x] `kinenix run` prints `Run <run_id>` as its first line, and every command that takes a run accepts its `run_id`
 - [x] Deprecations announced for 2.0, with a warning when used: the `orchestrator` names and `ORCHESTRATOR_*` variables, `on_error: retry`, `fallback_step_id`, `kinenix export-md`
@@ -262,7 +262,6 @@ GitHub Actions workflow `.github/workflows/ci.yml` runs on pushes and pull reque
 - [x] Default the bind host to `127.0.0.1`, requiring an explicit opt-in to listen on the network.
 - [x] Escape all worker-provided text in the dashboard (XSS), with a static check and a real-browser test.
 - [ ] Content-Security-Policy header for the dashboard (needs the inline `onclick` handlers moved to script).
-- [ ] Run AI failure analysis in the background so telemetry ingestion does not wait on the LLM.
 - [ ] Document an HTTPS reverse proxy setup (e.g. Caddy or nginx).
 
 ### 1.6 Persistent Studio Sessions and Debugging
@@ -337,15 +336,15 @@ Paused on 2026-10-08. Flows are written as `flow.md` from a `requirements.md` wi
 - [x] `kinenix connect URL`: asks for the worker key, checks it against the Hub, and saves the Hub in `~/.kinenix/kinenix.env` for `kinenix run` and kinenix-worker; `kinenix hub setup` offers the same for runs on the Hub machine, so no environment variables are needed
 - [x] `kinenix hub report [ID] --flow NAME`: the run report of a flow's latest run (name or part of it, `--limit N` for more), and `kinenix hub logs --flow NAME` for its steps
 - [x] `kinenix hub query`: read-only questions to the Hub database from the terminal, on the Hub machine or over HTTP (`--url`): views or tables with `--since`, `--flow`, `--worker`, `--status`, `--filter`, or one SQL `SELECT`; `--list` and `--describe` from the data dictionary; table, JSON, CSV, and Markdown output; user views from `~/.kinenix/hub_views/custom_*.sql`
-- [x] AI failure classification with rule-based fallback
+- [x] Failure cause and fix from the worker's rules (the Hub's own AI analysis was removed in 1.2.0)
 - [x] Worker API key authentication
 - [x] Dashboard authentication (HTTP Basic Auth)
 - [x] No CORS policy and localhost-only default bind address
-- [ ] Background AI analysis and HTTPS deployment guide (see 1.5)
+- [ ] HTTPS deployment guide (see 1.5)
 - [ ] PostgreSQL + Redis job queue
 - [ ] Business ROI dashboard: hours saved, cost saved, transaction audit trail
 - [ ] Alerts and daily digests (LINE Messaging API first, then Teams and Email)
-- [~] Natural-language questions about jobs and workers with a local model (see [ask_router.md](ask_router.md))
+- Natural-language questions and alerts belong to agents outside Kinenix, such as [kytnix](https://github.com/kinenix/kytnix); the ask router was removed in 1.2.0
 
 ### Worker (`kinenix-worker`) - In progress
 - [x] `kinenix-worker run`, `watch` (file trigger), `schedule` (interval), `daemon` (multi-trigger config)

@@ -101,7 +101,7 @@ def test_print_execution_log_shows_steps_and_failure():
     data = {
         "execution": {"id": "abc12345-1", "flow_name": "Demo [bold]", "worker_id": "pi4-01", "status": "failed",
                       "has_error": True, "duration_seconds": 4.25, "failed_step_name": "Submit",
-                      "error_message": "Timeout 3000ms", "ai_summary": "Button did not appear",
+                      "error_message": "Timeout 3000ms",
                       "created_at": "2026-10-03T11:59:00+00:00"},
         "steps": [
             {"step_name": "Open", "action": "web.open", "status": "success", "duration_seconds": 1.0},
@@ -112,7 +112,7 @@ def test_print_execution_log_shows_steps_and_failure():
     console = Console(record=True, width=160, color_system=None)
     hub_console.print_execution_log(console, data, now=datetime(2026, 10, 3, 12, 0, tzinfo=timezone.utc))
     out = console.export_text()
-    for expected in ("Demo [bold]", "pi4-01", "4.2s", "Button did not appear", "Steps (2)",
+    for expected in ("Demo [bold]", "pi4-01", "4.2s", "Submit", "Steps (2)",
                      "web.click", "Technical: Timeout 3000ms", "1m ago"):
         assert expected in out
 

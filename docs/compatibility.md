@@ -39,14 +39,13 @@ A flow, a script, or a Hub query that works on 1.0.0 keeps working on every late
 - **The Hub's tables:** query the views, which stay the same while the tables under them may change.
 - **The compiled JSON of `kinenix compile`:** it is for inspection; `flow.md` is the only input Kinenix reads.
 - **Python modules:** importing `kinenix`, `kinenix_hub`, or `kinenix_worker` from your own Python code is not a supported interface.
-- **Kinenix Studio** (paused) and the **ask router** (work in progress).
+- **Kinenix Studio** (paused).
 
 ## 4. Experimental
 
 These work, but their behavior may change in a minor release; the CHANGELOG says when:
 
-- The Hub's AI failure analysis (`CENTRAL_LLM_URL`, `POST /api/v1/executions/{id}/reanalyze`). It is being developed further, so a local model explains why a run failed; it joins section 2 in the minor release that finishes it.
-- `ai.decide`, which depends on a specific central model server (`CENTRAL_LLM_URL`).
+- `ai.decide`, which depends on a specific model server (OpenThai-SystemOne).
 - The answers of `ai.prompt` and `ai.extract`: their parameters are stable, but what a model answers depends on the model.
 
 ## 5. Deprecation and removal

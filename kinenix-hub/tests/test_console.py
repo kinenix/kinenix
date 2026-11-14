@@ -28,7 +28,7 @@ def test_browser_urls_never_offer_wildcard_address(monkeypatch):
 def test_banner_shows_worker_url_and_auth_state(monkeypatch):
     monkeypatch.setattr(hub_console, "lan_ip", lambda: "192.168.1.132")
     console = _console()
-    hub_console.print_banner(console, "0.0.0.0", 8080, "http://127.0.0.1:8000/v1/systemone",
+    hub_console.print_banner(console, "0.0.0.0", 8080,
                               api_key_set=True, dashboard_password_set=False)
     out = console.export_text()
     assert "http://192.168.1.132:8080" in out
@@ -40,7 +40,7 @@ def test_the_dashboard_url_works_from_other_machines_when_they_may_log_in(monkey
     # Over ssh, http://127.0.0.1 opened the viewer's own machine, not the Hub
     monkeypatch.setattr(hub_console, "lan_ip", lambda: "192.168.1.137")
     console = _console()
-    hub_console.print_banner(console, "0.0.0.0", 8080, "http://127.0.0.1:8000/v1/systemone",
+    hub_console.print_banner(console, "0.0.0.0", 8080,
                               api_key_set=True, dashboard_password_set=True)
     dashboard = [line for line in console.export_text().splitlines() if "Dashboard " in line][0]
     assert "http://192.168.1.137:8080  (on this machine: http://127.0.0.1:8080)" in dashboard
@@ -73,7 +73,7 @@ def test_print_status_renders_workers_and_failures():
         }],
         "executions": [{
             "flow_name": "RPA Challenge", "worker_id": "rpi4-01", "status": "failed", "duration_seconds": 8.42,
-            "has_error": True, "ai_summary": "Selector not found on submit button", "created_at": "2026-10-03T11:58:00+00:00",
+            "has_error": True, "error_message": "Selector not found on submit button", "created_at": "2026-10-03T11:58:00+00:00",
         }],
     }
     console = _console()

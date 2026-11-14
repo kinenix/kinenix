@@ -42,14 +42,6 @@ def test_a_run_sent_twice_is_stored_once():
         assert db.query(StepResult).filter(StepResult.execution_id == first["execution_id"]).count() == 1
 
 
-def test_a_repeat_does_not_ask_for_failure_analysis_again():
-    failed = {"has_error": True, "failure_details": {"error_message": "boom", "error_type": "Technical"}}
-    with patch.object(telemetry_service, "analyze_failure", wraps=telemetry_service.analyze_failure) as analyze:
-        _send("20261105T010000-bbbb", flow="Failed Twice", **failed)
-        _send("20261105T010000-bbbb", flow="Failed Twice", **failed)
-    assert analyze.call_count == 1
-
-
 def test_the_same_run_id_from_another_worker_is_another_run():
     _send("20261105T010000-cccc", worker="worker-a", flow="Two Workers")
     _send("20261105T010000-cccc", worker="worker-b", flow="Two Workers")
