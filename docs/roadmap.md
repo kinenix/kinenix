@@ -180,7 +180,7 @@ Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0
 
 ### 1.3.0: Hardening and docs
 
-**Goal:** close the open findings of the threat model ([design/threat-model.md](design/threat-model.md)), add a security guide for security teams, and organize the website as tutorial, how-to, reference, and explanation (#118).
+**Goal:** close the open findings of the threat model ([design/threat-model.md](design/threat-model.md)), add a security guide for security teams, and organize the website as tutorial, how-to, reference, and explanation (#118). Also signed flow packages: `kinenix pack`, `kinenix install`, publisher keys, and `kinenix-worker trust` ([design/flow-deploy.md](design/flow-deploy.md), section 12, part 1).
 
 ### 1.4.0: Daily results you can trust
 
@@ -194,7 +194,7 @@ Until 2026-11-03 this section was 1.1.0, "Agent interface". The goal grew: an ag
 
 The setup this milestone is tested on: the Ubuntu machine runs the Hub, a local model (Ollama), and the agent; the Raspberry Pi stays a worker without AI.
 
-**Scope:** the tools with a contract (design sections 3 to 9), flow approval (section 12), the MCP server `kinenix mcp` (section 13), and job dispatch from the Hub to a worker (section 14). `kinenix ask` is left out (decided 2026-11-12): the agent talks to the person.
+**Scope:** the tools with a contract (design sections 3 to 9), flow approval (section 12), the MCP server `kinenix mcp` (section 13), and job dispatch from the Hub to a worker (section 14), with publishing and delivering flow packages through the Hub on the same channel ([design/flow-deploy.md](design/flow-deploy.md), section 12, part 3). `kinenix ask` is left out (decided 2026-11-12): the agent talks to the person.
 
 **Exit criteria**
 
