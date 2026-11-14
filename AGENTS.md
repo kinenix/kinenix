@@ -39,7 +39,7 @@ cd kinenix-core; ../.venv/Scripts/python.exe -m pytest -q; cd ..
 # Security checks (CI job "Security checks"; .agents/rules/security.md)
 .venv/Scripts/python.exe -m pip install pip-audit bandit zizmor
 .venv/Scripts/python.exe -m bandit -q -r kinenix-core/kinenix kinenix-hub/kinenix_hub kinenix-worker/kinenix_worker -x "*/build/*"
-.venv/Scripts/zizmor.exe --offline --min-severity medium .github/workflows
+.venv/Scripts/zizmor.exe --offline --min-severity medium .github
 
 # Studio frontend
 cd kinenix-studio/frontend; npm ci; npm run build
