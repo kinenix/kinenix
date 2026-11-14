@@ -13,7 +13,7 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [design/list-functions.md](design/list-functions.md) | Design of sorting, filtering, totals, and comparisons in `${...}` (1.1.0) |
 | [design/loop-control.md](design/loop-control.md) | Design of `logic.break` and loops with `times` (1.1.0) |
 | [design/agent-interface.md](design/agent-interface.md) | Design of the agent interface: exit codes, `--json`, tools, error codes, confirmation, flow approval, MCP server, job dispatch; foundation in 1.0.0, the rest in 1.5.0 |
-| [design/flow-deploy.md](design/flow-deploy.md) | Design of deploying flows to workers: signed packages, publish to the Hub, workers pull and install (proposal) |
+| [design/flow-deploy.md](design/flow-deploy.md) | Design of deploying flows to workers: signed packages, publish to the Hub, workers pull and install; pack and install in 1.3.0, delivery through the Hub in 1.5.0 |
 | [design/threat-model.md](design/threat-model.md) | Threat model of core, worker, and Hub: what is protected, trust assumptions, threats with their milestone, review plan and findings |
 | [design/phase-2.md](design/phase-2.md) | Phase 2 design: On Error and Finally, subflow context, run records for AI questions, Hub tables and views, redaction (proposal) |
 

@@ -1,6 +1,6 @@
 # Design: Deploying Flows to Workers
 
-Status: **proposal** (2026-11-14), not yet approved; the open questions were decided on 2026-11-14 (section 13). It changes one decision of [agent-interface.md](agent-interface.md), section 14 ("only flows that are already on the worker"); see section 11.
+Status: **approved** (2026-11-14), with the decisions in section 13. It changes one decision of [agent-interface.md](agent-interface.md), section 14 ("only flows that are already on the worker"); see section 11.
 
 ## 1. Goal
 
