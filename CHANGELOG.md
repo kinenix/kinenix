@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+### Added
+
+- **The Hub view `v_flows`**: one row per flow the Hub has a run of, with its run count by status, its workers, its first and newest run, and the status, worker, and id of its newest run. It answers "how many flows run, and how is each one doing?" without counting rows of `v_runs`, for people (`kinenix hub query v_flows --since 30d`) and for agents through the Hub's query API. `--since` keeps the flows whose newest run is that recent. A flow that never ran is not on the Hub; `kinenix list` on its worker shows it. [docs/hub_data.md](docs/hub_data.md#v_flows).
+
 ### Removed
 
 - **The Hub's AI failure analysis** (`CENTRAL_LLM_URL`, `POST /api/v1/executions/{id}/reanalyze`), which was experimental ([docs/compatibility.md](docs/compatibility.md), section 4). The Hub calls no model now. The cause and fix of a failure come from the worker's rules, as before, in `root_cause` and `suggested_fix` of `v_failures`; the dashboard's failure window, `kinenix hub logs`, and agents read them there. The `ai_*` columns of `executions` stay, empty for new runs, so runs recorded before keep their values. `CENTRAL_LLM_URL` can be removed from the Hub's environment; it is ignored.
