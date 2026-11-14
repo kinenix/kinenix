@@ -110,6 +110,25 @@ One row per executed step. Answers: slowest steps, steps that fail most, what a 
 | `error` | Error of a failed step, at most 500 characters | `Timeout 30000ms exceeded` |
 | `output` | Output of the step as text, at most 500 characters | `{"rows": 12}` |
 
+### `v_flows`
+
+One row per flow the Hub has a run of. Answers: which flows run and how many there are, how often each one ran and how its runs ended, which flows stopped running, and where each one ran last. The counts cover every run the Hub keeps; `--since` (on `last_run_at`) keeps the flows that ran since then. A flow that has never run is not here: it exists only in the flows folder of its worker (`kinenix list` on that machine).
+
+| Column | Meaning | Example |
+| :--- | :--- | :--- |
+| `flow_name` | Flow | `TIPH Quotes` |
+| `run_count` | Runs of the flow | `412` |
+| `success_count` | Runs with status `success` | `380` |
+| `partial_count` | Runs with status `partial` | `25` |
+| `failed_count` | Runs with status `failed` | `6` |
+| `interrupted_count` | Runs with status `interrupted` | `1` |
+| `worker_count` | Workers that ran it | `2` |
+| `first_run_at` | Start of its first run, UTC | `2026-09-01 02:00:00.000000` |
+| `last_run_at` | Start of its newest run, UTC | `2026-11-14 08:29:00.000000` |
+| `last_status` | Status of its newest run | `partial` |
+| `last_worker_id` | Worker of its newest run | `rpi4` |
+| `last_execution_id` | Id on the Hub of its newest run (`v_runs.execution_id`) | `53a58daa-...` |
+
 ## Tables
 
 ### `executions`
@@ -269,6 +288,10 @@ At most 10 failures are listed; the rest are counted. A run without failures say
 ## Example questions
 
 ```sql
+-- How many flows ran in the last 30 days, and how did each one end last time?
+SELECT flow_name, run_count, last_status, last_run_at, last_worker_id
+FROM v_flows WHERE last_run_at >= datetime('now', '-30 days') ORDER BY flow_name;
+
 -- What failed since yesterday, and where?
 SELECT failed_at, flow_name, worker_id, step_path, loop_item, handled, message
 FROM v_failures WHERE failed_at >= datetime('now', '-1 day') ORDER BY failed_at;
