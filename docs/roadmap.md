@@ -355,7 +355,7 @@ Paused on 2026-10-08. Flows are written as `flow.md` from a `requirements.md` wi
 - [x] `kinenix-worker service install` and `uninstall` for workers installed with pip (#153)
 - [x] Cron schedules (`"cron": "0 8 1 * *"` in `triggers.json`, `kinenix-worker schedule --cron`)
 - [ ] WebSocket job client (see 1.7)
-- [ ] Bundle packaging (`.kinpkg`), download, and local cache
+- [ ] Bundle packaging (`.kinx`), download, and local cache
 - [ ] Real-time log and screenshot streaming
 
 ### Desktop Automation and Public Release - Not started

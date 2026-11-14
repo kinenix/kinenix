@@ -96,7 +96,7 @@ This ties the component to the caller's key names, so prefer `inputs` for compon
 
 The project bundle structure directly enables a robust deployment pipeline to unattended robot workers (`kinenix-worker`):
 
-> **Status:** Stage 1 and the sandbox workspace in Stage 4 (`kinenix-worker run --sandbox`) are implemented. Packaging, Hub distribution, the worker cache, and WebSocket streaming (Stages 2, 3, 5) are planned. See [roadmap.md](roadmap.md).
+> **Status:** Stage 1 and the sandbox workspace in Stage 4 (`kinenix-worker run --sandbox`) are implemented. Packaging, Hub distribution, the worker cache, and WebSocket streaming (Stages 2, 3, 5) are planned. See [roadmap.md](roadmap.md). The proposal that replaces Stages 2 and 3 (signed packages that workers pull from the Hub, no WebSocket) is [design/flow-deploy.md](design/flow-deploy.md).
 
 ```text
 [ Developer Machine ] -> [ Kinenix Hub ] -> [ Unattended Worker Daemon ]
@@ -109,7 +109,7 @@ The project bundle structure directly enables a robust deployment pipeline to un
 - All assets remain inside `./assets/` and logs are written to central `logs/`.
 
 ### Stage 2: Packaging & Versioning
-- The project bundle directory is packaged into a versioned archive (e.g. `invoice_tax_filing-1.0.0.kinpkg` or `.zip`).
+- The project bundle directory is packaged into a versioned archive (e.g. `invoice_tax_filing-1.0.0.kinx` or `.zip`).
 - Any referenced `@shared/` flows are inlined by the packaging tool into the bundle, ensuring the archive is 100% self-contained.
 - The package is published to **Kinenix Hub**.
 
