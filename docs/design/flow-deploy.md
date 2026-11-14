@@ -1,6 +1,6 @@
 # Design: Deploying Flows to Workers
 
-Status: **proposal** (2026-11-14), not yet approved. It changes one decision of [agent-interface.md](agent-interface.md), section 14 ("only flows that are already on the worker"); see section 11.
+Status: **proposal** (2026-11-14), not yet approved; the open questions were decided on 2026-11-14 (section 13). It changes one decision of [agent-interface.md](agent-interface.md), section 14 ("only flows that are already on the worker"); see section 11.
 
 ## 1. Goal
 
@@ -47,7 +47,8 @@ hello-1.3.0.kinx
 - **Extension `.kinx`** (decided 2026-11-14): short, and no other program was found using it. `.knx` was dropped because the KNX building-automation standard uses `.knxproj` and `.knxprod`; `.kix` because it is a KiXtart logon script, which Windows machines may run and mail filters block.
 - **Left out:** `.env`, `config/local.json` (section 7), `output/`, `logs/`, `tests/`, `.git/`, and the patterns in an optional `.kinenixignore`.
 - **`@shared/` subflows are copied in**, and the package records which were copied, so the package runs on a worker without the same `@shared` folder.
-- **Version:** `--version 1.3.0`, or `## Package` / `- **version:**` in `flow.md` (to be decided, section 13). A version that was already published cannot be published again with other content.
+- **Version:** written in `flow.md` as `> Version: 1.3.0` under the title, next to `> Requires:`; `kinenix pack --version` overrides it for one build. A version that was already published cannot be published again with other content.
+- **A changed flow needs a new version:** `kinenix pack` records the content hash of each version it packed in `.kinenix-packed.json` in the flow folder (kept in git, so every machine that builds the flow knows it). `kinenix validate` and `kinenix pack` report when the content differs from what was packed under the same version (`flow changed since 1.3.0 was packed; raise > Version`), and `pack` refuses to build it. The Hub refuses a package whose name and version it has with other content.
 - **Manifest:** name, version, the SHA-256 of every file, the `> Requires:` of the flow, the Kinenix version that built it, the build time, and the publisher key id.
 - `kinenix validate` runs before packing; a flow with issues is not packed.
 
@@ -59,12 +60,13 @@ hello-1.3.0.kinx
 - `kinenix pack` signs the manifest with the private key; the manifest holds the hash of every file, so the signature covers the whole package.
 - `kinenix-worker trust add <public key> --name office-pc` adds a publisher on a worker; `trust list` and `trust remove` manage them.
 - On install, the worker checks, in order: the signature against a trusted publisher, every file hash, `> Requires:` against its own Kinenix version, and that no path leaves the flow folder (threat model T6). Any failure refuses the package with a stable error code (`PACKAGE_UNTRUSTED`, `PACKAGE_DAMAGED`, `PACKAGE_REQUIRES`).
-- **Algorithm:** Ed25519. Which library is open (section 13): `cryptography` adds a dependency to kinenix-core; OpenSSH signatures (`ssh-keygen -Y sign`) need no Python dependency and exist on Windows, Ubuntu, and Raspberry Pi OS.
+- **OpenSSH signatures** (decided 2026-11-14): Ed25519 keys made and used with `ssh-keygen` (`-Y sign` on the building machine, `-Y verify` on the worker, with the trusted publishers in an `allowed_signers` file). No Python dependency; it needs OpenSSH 8.0 or later, which Windows 10 and 11, Ubuntu, and Raspberry Pi OS have. Without `ssh-keygen`, `pack` and `install` say what is missing, and `kinenix-worker deploy status` shows it.
 - **Losing the private key:** make a new key, trust it on the workers, remove the old one. A stolen private key can sign packages until workers remove it, so the key stays on the building machine and is never put on the Hub.
 
 ## 6. Publishing and assigning on the Hub
 
-- `kinenix publish hello-1.3.0.kinx` uploads to the Hub with the worker key. The Hub checks the signature against the publishers it was told about (only to show who signed; workers check again), stores the file in `~/.kinenix/hub_packages/`, and records it in a `packages` table.
+- `kinenix publish hello-1.3.0.kinx` uploads to the Hub with the worker key. The Hub checks the signature against the publishers it knows (only to show who signed and warn early; workers check again), stores the file in `~/.kinenix/hub_packages/`, and records it in a `packages` table.
+- **Publishers on the Hub** (decided 2026-11-14): the Hub keeps the publishers' public keys so the dashboard can show who signed a package and warn before workers refuse one. A signed-in dashboard user adds and removes them; the worker key can only list them; without a key or password nothing. **The Hub never sends this list to workers**: a worker trusts only the keys its owner added on the machine (`trust add`), so whoever takes over the Hub cannot add a key of their own and reach the workers.
 - On the dashboard, signed in, a person assigns a version of a flow to workers. `kinenix hub deploy hello 1.3.0 --worker pi` does the same from a terminal with the dashboard password. An assignment is a row: flow, version, worker, assigned by, assigned at.
 - The worker key alone can publish but not assign. A stolen worker key can upload packages, which no worker installs unless they carry a trusted signature.
 - A size limit on uploads (default 50 MB) and on the number of stored versions per flow (default 10, the oldest unassigned removed first).
@@ -77,8 +79,9 @@ hello-1.3.0.kinx
 - **Never over a hand-made folder:** the worker refuses to install into a folder without `.kinenix-deployed.json` (a git checkout or a copied folder), and reports it on the dashboard. `kinenix-worker deploy adopt hello` lets the owner hand that folder to deploying.
 - **Kept across updates:** `.env`, `config/local.json`, `output/`, and `logs/`. Everything else is replaced.
 - **Atomic:** the new version is unpacked next to the folder and swapped in by renaming; a run that is going on finishes on the files it started with, and the swap waits until it ends.
+- **Files in use on Windows** (decided 2026-11-14): Windows cannot rename a folder while a program holds a file in it open (Excel with `assets/template.xlsx`, Explorer or a terminal in the folder, antivirus or OneDrive scanning it). The worker retries the swap for about two minutes, since scans let go by themselves. If it still fails, the old version stays whole, the dashboard shows `hello 1.3.0 not installed: assets/template.xlsx is in use`, and the worker tries again at its next poll. The worker never closes or kills other programs: that could lose a person's unsaved work.
 - **Rollback:** the last packages are kept in `~/.kinenix/packages/<flow>/`. Assigning an older version on the dashboard installs it again; `kinenix-worker deploy rollback hello` does it on the machine without the Hub.
-- **Machine settings:** `config/local.json` is merged over `config/config.json` key by key, as `kinenix run --config` does today, for values that differ per machine (folders, printer names, a test or production site). Secrets stay in `.env`.
+- **Machine settings:** `config/local.json` belongs to the flow folder on one machine and is merged over `config/config.json` key by key, as `kinenix run --config` does today, for values that differ per machine (folders, printer names, a test or production site). Secrets stay in `.env`. Every run reads it again (decided 2026-11-14), for every flow, deployed or not, so a change takes effect at the next run and a flow behaves the same on the building machine and on a worker. `kinenix init` adds it to the project's `.gitignore`.
 
 ## 8. What the dashboard shows
 
@@ -97,6 +100,8 @@ New threats for [threat-model.md](threat-model.md):
 | An old, broken version is assigned again on purpose | Only a signed-in dashboard user can assign; every assignment is recorded with who made it |
 | The publisher's private key is stolen | Remove it on the workers (`trust remove`); keep it only on the building machine, mode 600 |
 | Deploying replaces a flow while it runs | The swap waits for the run to end |
+| Whoever takes over the Hub adds their own publisher key | The Hub's publisher list is for display only and never reaches workers; workers trust only keys added on the machine |
+| A flow changes but keeps its version, so two machines run different flows under one number | `validate` and `pack` compare with `.kinenix-packed.json`; the Hub refuses the same version with other content |
 
 A flow is still code (T1): a trusted publisher can still sign a harmful flow. Signing proves who built a package, not that it is safe; review of flows before publishing stays the person's job.
 
@@ -105,7 +110,7 @@ A flow is still code (T1): a trusted publisher can still sign a harmful flow. Si
 | Command | Where | What it does |
 | :--- | :--- | :--- |
 | `kinenix pack FLOW [--version V]` | building machine | Validates, builds, and signs `<name>-<version>.kinx` |
-| `kinenix publisher init` / `show` | building machine | Creates the signing key / prints the public key |
+| `kinenix publisher init` / `show` | building machine | Creates the signing key with `ssh-keygen` / prints the public key |
 | `kinenix install FILE` | any machine | Installs a package from a file, with all checks |
 | `kinenix publish FILE` | building machine | Uploads a package to the Hub |
 | `kinenix hub deploy FLOW VERSION --worker W` | Hub or any connected machine | Assigns a version to workers (dashboard password) |
@@ -128,13 +133,18 @@ Each part is useful before the next:
 
 All of it is additions: new commands, endpoints, tables, and heartbeat fields; nothing in [compatibility.md](../compatibility.md) changes.
 
-## 13. Open questions
+## 13. Decisions
 
-- Signing library: `cryptography` (a new dependency of kinenix-core) or OpenSSH signatures (no dependency, an external program).
-- Where the version is written: a `--version` flag only, or also in `flow.md`.
-- Whether `config/local.json` is loaded by every run or only when the worker runs a deployed flow.
-- Whether the Hub should also keep the publishers' public keys, to warn before a worker refuses a package.
-- Windows service and file locking during the swap (a file open in Excel inside `assets/`).
+2026-11-14:
+
+- **Extension:** `.kinx` (section 4).
+- **Signing:** OpenSSH signatures, no Python dependency (section 5).
+- **Version:** `> Version:` in `flow.md`; `validate` and `pack` report a changed flow that kept its version (section 4).
+- **`config/local.json`:** read by every run of every flow (section 7).
+- **Publishers on the Hub:** kept for display and early warnings, changed only by a signed-in dashboard user, never sent to workers (section 6).
+- **Files in use on Windows:** retry, keep the old version whole, report the file on the dashboard; never kill other programs (section 7).
+
+Open: none.
 
 ## 14. Out of scope
 
