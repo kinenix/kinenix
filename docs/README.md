@@ -37,7 +37,6 @@ Each topic has one owning document. Other files link here instead of repeating t
 | [hub.md](hub.md) | Running the Hub, environment variables, worker authentication, querying runs (`kinenix hub query`), user views |
 | [hub_data.md](hub_data.md) | Hub data dictionary: tables, views, run reports, and example queries, for people and AI |
 | [logging.md](logging.md) | Execution log layout and JSON format |
-| [ask_router.md](ask_router.md) | Natural-language questions to the Hub (work in progress) |
 | [../kinenix-worker/README.md](../kinenix-worker/README.md) | Worker CLI and Raspberry Pi setup |
 | [../CHANGELOG.md](../CHANGELOG.md) | Changes and upgrade notes of each release |
 | [compatibility.md](compatibility.md) | What stays stable for all of 1.x, what may change, deprecations, and upgrading |

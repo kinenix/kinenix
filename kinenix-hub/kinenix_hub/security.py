@@ -100,7 +100,7 @@ def require_worker_api_key(
     api_key: Optional[str] = Security(_api_key_header),
 ) -> None:
     """
-    Guards worker-facing write endpoints (heartbeat, telemetry, reanalyze).
+    Guards worker-facing write endpoints (heartbeat, telemetry).
 
     - KINENIX_HUB_API_KEY set: every request must send a matching X-API-Key header.
     - KINENIX_HUB_API_KEY unset (local dev mode): only loopback clients are accepted,

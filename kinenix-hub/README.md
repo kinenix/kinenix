@@ -7,7 +7,7 @@ The **Kinenix Hub** is the central server of [Kinenix](https://github.com/kineni
 - Receives heartbeats from workers and shows each one as online, busy, or offline
 - Stores every execution with its steps, timings, and errors (SQLite by default, any SQLAlchemy database through `DATABASE_URL`)
 - Web dashboard, plus `kinenix hub status` and `kinenix hub logs` in the terminal
-- AI failure summaries through a local model, so business data stays on your network
+- Shows the worker's diagnosis of each failed step: what went wrong and how to fix it
 - Worker API key and dashboard login; listens on localhost only until you opt in
 
 ## Installation

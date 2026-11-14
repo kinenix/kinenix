@@ -680,7 +680,7 @@ def main():
         from kinenix_hub import app as hub_app
         host = args.host or hub_config.HOST
         hub_console.print_banner(
-            console, host, port, hub_config.CENTRAL_LLM_URL,
+            console, host, port,
             api_key_set=bool(hub_config.API_KEY),
             dashboard_password_set=hub_config.dashboard_password_required(),
         )

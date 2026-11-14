@@ -4,7 +4,6 @@ from unittest.mock import patch, MagicMock
 
 from kinenix_hub import config as hub_config
 from kinenix_hub.app import app
-from kinenix_hub.services.ai_summarizer import CATEGORIES
 
 # Local-dev client: no API key configured, requests arrive from loopback
 client = TestClient(app, base_url="http://127.0.0.1:8080", client=("127.0.0.1", 50000))
@@ -117,56 +116,17 @@ def test_telemetry_ingestion_failure_with_ai():
         "payload": log_payload
     }
 
-    # Mock OpenThai-SystemOne HTTP response
-    with patch("requests.post") as mock_post:
-        mock_post.return_value = MagicMock(
-            status_code=200,
-            json=lambda: {
-                "choice": "Cookie Consent / Security Modal",
-                "score": 0.94
-            }
-        )
+    with patch("requests.post") as post:
         response = client.post("/api/v1/telemetry", json=req)
-        assert response.status_code == 200
-        data = response.json()
-        assert data["status"] == "recorded"
-        assert data["has_error"] is True
-        assert "Cookie" in data["ai_summary"]
-        execution = client.get(f"/api/v1/executions/{data['execution_id']}").json()
-        assert execution["ai_confidence"] == 94.0
-
-
-@pytest.mark.parametrize(
-    "score_fields",
-    [{"score": None}, {"score": 92}, {}],
-    ids=["null", "out-of-range", "missing"],
-)
-def test_invalid_llm_confidence_falls_back_to_rules_and_records_run(score_fields):
-    payload = {
-        "flow_name": "Invalid LLM Confidence",
-        "has_error": True,
-        "failure_details": {
-            "failed_step_name": "Load Page",
-            "error_type": "Technical",
-            "exception_class": "TimeoutError",
-            "error_message": "Timeout while loading page",
-        },
-        "metrics": {"total_duration_seconds": 2.0},
-    }
-    llm_response = MagicMock(status_code=200)
-    llm_response.json.return_value = {
-        "choice": "Page Load / Network Timeout",
-        **score_fields,
-    }
-
-    with patch("kinenix_hub.services.ai_summarizer.requests.post", return_value=llm_response):
-        response = client.post("/api/v1/telemetry", json={"worker_id": "invalid-score-worker", "payload": payload})
-
     assert response.status_code == 200
-    execution = client.get(f"/api/v1/executions/{response.json()['execution_id']}").json()
-    assert execution["ai_category"] == CATEGORIES["Page Load / Network Timeout"]["th_label"]
-    assert execution["ai_confidence"] == 60.0
-    assert execution["status"] == "failed"
+    data = response.json()
+    assert data["status"] == "recorded"
+    assert data["has_error"] is True
+    # The Hub records the failure as the worker reported it and calls no model (1.2.0)
+    assert not post.called
+    execution = client.get(f"/api/v1/executions/{data['execution_id']}").json()
+    assert execution["failed_step_name"] == "Click Cookie Consent Button"
+    assert execution["ai_category"] is None
 
 
 def test_list_executions():
@@ -210,12 +170,6 @@ def test_remote_worker_valid_api_key_accepted(monkeypatch):
 def test_localhost_must_send_api_key_once_configured(monkeypatch):
     monkeypatch.setattr(hub_config, "API_KEY", "s3cret-key")
     response = client.post("/api/v1/heartbeat", json=HEARTBEAT_PAYLOAD)
-    assert response.status_code == 401
-
-
-def test_reanalyze_requires_api_key(monkeypatch):
-    monkeypatch.setattr(hub_config, "API_KEY", "s3cret-key")
-    response = remote_client.post("/api/v1/executions/any-id/reanalyze")
     assert response.status_code == 401
 
 

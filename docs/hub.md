@@ -75,7 +75,7 @@ kinenix hub report 54f84bd6                          # report of one execution
 
 `report` prints the run report described in [hub_data.md](hub_data.md#run-report): items done and failed, each failure with its item, step, subflow, line, and how it was handled, and the On Error and Finally results. Like `query` ([section 7](#7-querying-runs)), it reads `hub.db` on the Hub machine without a running Hub, or a Hub on another machine with `--url`. `logs` and `status` always ask a running Hub.
 
-`logs` shows each step's name, action, status, duration, and error, plus the failure and AI summary of a failed run. For a failed step it shows the worker's diagnosis (what went wrong and how to fix it, for example a cookie banner covering a button) and the loop item it failed on, instead of the raw browser message; the dashboard shows the same, with the full message under "ข้อความเต็ม". The dashboard shows the same table from the "ดู Steps" button on each execution. Step output and flow variables are stored in the execution log but are not shown, because they can contain business data. Worker messages outside flow steps (heartbeat problems, service start) stay on the worker; on a Raspberry Pi service, read them with `journalctl -u kinenix-worker -f`.
+`logs` shows each step's name, action, status, duration, and error, plus the failed step and error of a failed run. For a failed step it shows the worker's diagnosis (what went wrong and how to fix it, for example a cookie banner covering a button) and the loop item it failed on, instead of the raw browser message; the dashboard shows the same, with the full message under "ข้อความเต็ม". The dashboard shows the same table from the "ดู Steps" button on each execution. Step output and flow variables are stored in the execution log but are not shown, because they can contain business data. Worker messages outside flow steps (heartbeat problems, service start) stay on the worker; on a Raspberry Pi service, read them with `journalctl -u kinenix-worker -f`.
 
 It reads `KINENIX_HUB_DASHBOARD_USER` and `KINENIX_HUB_DASHBOARD_PASSWORD` from the environment, so set them to the server's values when a dashboard password is configured ([section 3](#3-dashboard-authentication)).
 
@@ -89,7 +89,6 @@ No CORS policy is configured: the dashboard is served from the Hub's own origin,
 | `KINENIX_HUB_DASHBOARD_USER` | `admin` | Username for the dashboard login. See [Dashboard Authentication](#3-dashboard-authentication). |
 | `KINENIX_HUB_DASHBOARD_PASSWORD` | *(unset)* | Password for the dashboard login. |
 | `DATABASE_URL` | `sqlite:///~/.kinenix/hub.db` | SQLAlchemy connection string (e.g. PostgreSQL). The default SQLite file lives in your home folder, outside the source tree, so reinstalling keeps the data. |
-| `CENTRAL_LLM_URL` | `http://127.0.0.1:8000/v1/systemone` | LLM endpoint used for failure analysis. |
 | `KINENIX_HUB_HOST` / `KINENIX_HUB_PORT` | `127.0.0.1` / `8080` | Bind address and port. The CLI flags `--host` / `--port` override them. Use `0.0.0.0` to accept remote connections. |
 | `KINENIX_HUB_SETTINGS_FILE` | `~/.kinenix/hub.env` | Saved settings written by `kinenix hub setup`. See [Saved Settings](#saved-settings-first-run). |
 | `KINENIX_HUB_VIEWS_DIR` | `~/.kinenix/hub_views` | Folder of user views (`custom_*.sql`), created at every start. See [User views](#72-user-views). |
@@ -105,7 +104,6 @@ The Hub has two independent credentials: an API key for workers (this section) a
 | :--- | :--- |
 | `POST /api/v1/heartbeat` | Worker API key |
 | `POST /api/v1/telemetry` | Worker API key |
-| `POST /api/v1/executions/{id}/reanalyze` | Worker API key |
 | `GET /api/v1/auth/worker` (key check for `kinenix connect`; records nothing) | Worker API key |
 | `GET /` (dashboard page) | Dashboard login |
 | `GET /api/v1/workers`, `/api/v1/executions`, `/api/v1/executions/{id}`, `/api/v1/executions/{id}/steps` | Dashboard login |

@@ -70,6 +70,7 @@ class Execution(Base):
     details = Column(Text, nullable=True)
 
     # Central AI Triage & Summary
+    # Written by the failure analysis removed in 1.2.0; kept so runs recorded before it keep their values
     ai_category = Column(String(128), nullable=True)
     ai_confidence = Column(Float, nullable=True)
     ai_summary = Column(Text, nullable=True)

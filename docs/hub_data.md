@@ -133,11 +133,11 @@ One row per run, written when the worker sends the run.
 | `error_message` | Error message | `File is open in Excel` |
 | `screenshot_path` | Screenshot path on the worker | `./errors/step_3.png` |
 | `raw_log` | The whole execution log as sent ([logging.md](logging.md)) | `{"flow_name": ...}` |
-| `ai_category` | Failure category from the Hub's failure analysis, a Thai label | `หาปุ่มหรือ Element ไม่พบบนหน้าเว็บ (โครงสร้างเปลี่ยน)` |
-| `ai_confidence` | Its confidence, 0 to 100 | `85.0` |
-| `ai_summary` | Short explanation, in Thai | |
-| `ai_root_cause` | Likely cause, in Thai | |
-| `ai_suggestion` | Suggested fix, in Thai | |
+| `ai_category` | Failure category from the Hub's failure analysis, a Thai label. Empty for runs recorded from 1.2.0, which removed that analysis; read `root_cause` and `suggested_fix` of `v_failures` instead | `หาปุ่มหรือ Element ไม่พบบนหน้าเว็บ (โครงสร้างเปลี่ยน)` |
+| `ai_confidence` | Its confidence, 0 to 100 (empty from 1.2.0) | `85.0` |
+| `ai_summary` | Short explanation, in Thai (empty from 1.2.0) | |
+| `ai_root_cause` | Likely cause, in Thai (empty from 1.2.0) | |
+| `ai_suggestion` | Suggested fix, in Thai (empty from 1.2.0) | |
 | `created_at` | When the Hub received the run, UTC | `2026-10-11 19:14:01.000000` |
 | `details` | JSON, keys below | `{"v": 1, "run_id": ...}` |
 | `run_id` | Run id on the worker; unique for each worker, so a run sent twice is stored once. Empty for runs from older workers | `20261012T020000-abcd` |

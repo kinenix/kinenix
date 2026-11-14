@@ -137,7 +137,6 @@ When you change code so that it matches a target, update this table and `docs/ro
 | `KINENIX_HUB_VIEWS_DIR` | kinenix-hub | Folder of user views (`custom_*.sql`) created at every Hub start (default `~/.kinenix/hub_views`) |
 | `KINENIX_HUB_WORKER_OFFLINE_SECONDS` | kinenix-hub | Seconds without a heartbeat before a worker shows as offline (default 90) |
 | `DATABASE_URL` | kinenix-hub | SQLAlchemy connection string |
-| `CENTRAL_LLM_URL` | kinenix-hub | LLM endpoint for failure analysis |
 
 ## Keeping This File Accurate
 

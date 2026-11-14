@@ -2,6 +2,13 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+### Removed
+
+- **The Hub's AI failure analysis** (`CENTRAL_LLM_URL`, `POST /api/v1/executions/{id}/reanalyze`), which was experimental ([docs/compatibility.md](docs/compatibility.md), section 4). The Hub calls no model now. The cause and fix of a failure come from the worker's rules, as before, in `root_cause` and `suggested_fix` of `v_failures`; the dashboard's failure window, `kinenix hub logs`, and agents read them there. The `ai_*` columns of `executions` stay, empty for new runs, so runs recorded before keep their values. `CENTRAL_LLM_URL` can be removed from the Hub's environment; it is ignored.
+- **The ask router** (natural-language questions to the Hub), which was work in progress. Kinenix stays an RPA tool; questions and alerts belong to agents that read the Hub, such as [kytnix](https://github.com/kinenix/kytnix).
+
 ## 1.1.0 (2026-11-13)
 
 Flow data tools: lists, loop control, and error handling for the flows that AI assistants write, and checks that catch their mistakes before a run. It contains everything in 1.1.0rc1 (below) and the changes listed here. Nothing promised in 1.0.0 changes ([docs/compatibility.md](docs/compatibility.md)).
