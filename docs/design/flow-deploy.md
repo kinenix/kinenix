@@ -58,7 +58,7 @@ hello-1.3.0.kinx
 
 - `kinenix publisher init` creates a key pair on the building machine: the private key in `~/.kinenix/publisher/` with mode 600, the public key printed as one line to give to workers.
 - `kinenix pack` signs the manifest with the private key; the manifest holds the hash of every file, so the signature covers the whole package.
-- `kinenix-worker trust add <public key> --name office-pc` adds a publisher on a worker; `trust list` and `trust remove` manage them.
+- `kinenix trust add <public key> --name office-pc` adds a publisher on a machine; `trust list` and `trust remove` manage them. It is part of `kinenix`, not `kinenix-worker`, so the building machine can install and run its own package before giving it out (decided 2026-11-16); `kinenix publisher init` trusts the new key on that machine.
 - On install, the worker checks, in order: the signature against a trusted publisher, every file hash, `> Requires:` against its own Kinenix version, and that no path leaves the flow folder (threat model T6). Any failure refuses the package with a stable error code (`PACKAGE_UNTRUSTED`, `PACKAGE_DAMAGED`, `PACKAGE_REQUIRES`).
 - **OpenSSH signatures** (decided 2026-11-14): Ed25519 keys made and used with `ssh-keygen` (`-Y sign` on the building machine, `-Y verify` on the worker, with the trusted publishers in an `allowed_signers` file). No Python dependency; it needs OpenSSH 8.0 or later, which Windows 10 and 11, Ubuntu, and Raspberry Pi OS have. Without `ssh-keygen`, `pack` and `install` say what is missing, and `kinenix-worker deploy status` shows it.
 - **Losing the private key:** make a new key, trust it on the workers, remove the old one. A stolen private key can sign packages until workers remove it, so the key stays on the building machine and is never put on the Hub.
@@ -73,7 +73,7 @@ hello-1.3.0.kinx
 
 ## 7. Delivery and the layout on the worker
 
-- **Turned on by the owner:** `kinenix-worker deploy enable`. Off by default; a worker with deploying off ignores assignments and shows so in its heartbeat.
+- **Turned on by the owner:** `kinenix-worker deploy enable`. Off by default; a worker with deploying off ignores assignments and shows so in its heartbeat. It governs only packages the Hub delivers (1.5.0); `kinenix install` run by a person at the machine does not need it, and the signature is checked either way (decided 2026-11-16).
 - **Delivery:** the worker's long poll (`GET /api/v1/jobs/next`, agent-interface.md section 14) also answers "a new assignment exists". The worker then downloads the package, checks it (section 5), and installs it. Workers before this version never ask and are not affected.
 - **Where it goes:** into the flows folder as `~/kinenix-flows/hello/`, so `kinenix run hello` and existing triggers keep working. A file `.kinenix-deployed.json` in the folder records the package, version, publisher, and install time.
 - **Never over a hand-made folder:** the worker refuses to install into a folder without `.kinenix-deployed.json` (a git checkout or a copied folder), and reports it on the dashboard. `kinenix-worker deploy adopt hello` lets the owner hand that folder to deploying.
@@ -114,8 +114,9 @@ A flow is still code (T1): a trusted publisher can still sign a harmful flow. Si
 | `kinenix install FILE` | any machine | Installs a package from a file, with all checks |
 | `kinenix publish FILE` | building machine | Uploads a package to the Hub |
 | `kinenix hub deploy FLOW VERSION --worker W` | Hub or any connected machine | Assigns a version to workers (dashboard password) |
-| `kinenix-worker trust add / list / remove` | worker | Publishers this worker accepts |
-| `kinenix-worker deploy enable / disable / status / adopt / rollback` | worker | Deploying on this worker |
+| `kinenix trust add / list / remove` | any machine | Publishers this machine accepts (1.3.0) |
+| `kinenix-worker deploy adopt / rollback` | worker | Hand a hand-made folder to deploying / install the previous package again (1.3.0) |
+| `kinenix-worker deploy enable / disable / status` | worker | Accept packages the Hub delivers (1.5.0) |
 
 ## 11. Relation to job dispatch and triggers
 
@@ -143,6 +144,19 @@ All of it is additions: new commands, endpoints, tables, and heartbeat fields; n
 - **`config/local.json`:** read by every run of every flow (section 7).
 - **Publishers on the Hub:** kept for display and early warnings, changed only by a signed-in dashboard user, never sent to workers (section 6).
 - **Files in use on Windows:** retry, keep the old version whole, report the file on the dashboard; never kill other programs (section 7).
+
+2026-11-16, details for 1.3.0:
+
+- **`config/local.json`:** top-level keys replace those of `config.json`, as `--config` does (a key holding an object is replaced whole); order: `config.json`, `local.json`, `--config`. Subflows of the bundle see the merged config; a shared subflow only with `inherit_config`, as today. The log names the keys it replaced, never their values. A file that is not a JSON object stops the run (exit code 4) and `validate` reports it.
+- **Version format:** `X.Y.Z`, or with `aN`, `bN`, `rcN`, ordered like Kinenix's own versions.
+- **`flow_version` on the Hub:** in the run record, so `v_runs` and `v_flows` show which version each machine ran.
+- **Package name:** the flow's folder name, which `kinenix init` makes from the title (`Get stock data` gives `get_stock_data`). The title goes into the manifest for display.
+- **Old packages on a worker:** 10 per flow by default, like the Hub, and a setting to change it; workers are not only Raspberry Pis.
+- **Publisher key:** may have a passphrase (not required); `ssh-keygen` asks for it at `pack`.
+- **A run going on:** the interpreter keeps a lock file `~/.kinenix/running/<flow>` with its process id; the swap waits until it is gone, or until that process no longer exists.
+- **Installing on the building machine:** `kinenix install` must work on a machine with only `kinenix` installed, so the person who built a package can install and run it there first. Trusting a publisher therefore cannot need `kinenix-worker`: the command is `kinenix trust` (section 5).
+
+- **`deploy enable`:** only for packages the Hub delivers, built in 1.5.0 with delivery; not needed for `kinenix install` by hand (section 7).
 
 Open: none.
 
