@@ -32,7 +32,7 @@
 | **`kinenix-core`** | Flow interpreter, action plugins, and `kinenix` CLI | Implemented |
 | **`kinenix-worker`** | Unattended runner with schedule and file-watch triggers | Implemented (WebSocket dispatch planned) |
 | **`kinenix-studio`** | Web-based flow editor and runner | Paused (see [Roadmap](docs/roadmap.md#studio-kinenix-studio---paused)) |
-| **`kinenix-hub`** | Central telemetry server, dashboard, and AI failure summaries | Early |
+| **`kinenix-hub`** | Central telemetry server and dashboard | Early |
 
 Flows are packaged as self-contained project bundles under `flows/`. See [Architecture](docs/architecture.md) for the execution pipeline, AI integration, and target design, and [Roadmap](docs/roadmap.md) for delivery status.
 

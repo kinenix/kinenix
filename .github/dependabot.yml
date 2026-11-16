@@ -8,6 +8,9 @@ updates:
     target-branch: dev
     schedule:
       interval: weekly
+    # A new release waits a week, so a hijacked action is more likely found before it reaches here
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]

@@ -25,7 +25,7 @@ A flow, a script, or a Hub query that works on 1.0.0 keeps working on every late
 | Exit codes | The codes and their meanings ([cli_guide.md, Exit Codes](cli_guide.md#28-exit-codes)) | New codes for new situations only, never a new meaning for an existing code |
 | Run id | `kinenix run` prints `Run <run_id>` as its first line; the same id is `${run.id}`, is part of the log file names, and is accepted by `kinenix hub logs` | |
 | Execution logs | The JSON format of a run's log ([logging.md](logging.md), `schemas/execution_log.schema.json`) | New fields |
-| Hub views | `v_runs`, `v_failures`, `v_steps`: their names, columns, and the meaning of each column ([hub_data.md](hub_data.md)) | New views and columns |
+| Hub views | `v_runs`, `v_failures`, `v_steps`, and `v_flows` (from 1.2.0): their names, columns, and the meaning of each column ([hub_data.md](hub_data.md)) | New views and columns |
 | Hub API | The `/api/v1/` endpoints that workers and `kinenix hub` use, and the `X-API-Key` header | New endpoints and fields |
 | Settings | Environment variables (`KINENIX_*`, `DATABASE_URL`) and the keys of `~/.kinenix/kinenix.env` and `~/.kinenix/hub.env` | New variables and keys |
 
@@ -39,14 +39,13 @@ A flow, a script, or a Hub query that works on 1.0.0 keeps working on every late
 - **The Hub's tables:** query the views, which stay the same while the tables under them may change.
 - **The compiled JSON of `kinenix compile`:** it is for inspection; `flow.md` is the only input Kinenix reads.
 - **Python modules:** importing `kinenix`, `kinenix_hub`, or `kinenix_worker` from your own Python code is not a supported interface.
-- **Kinenix Studio** (paused) and the **ask router** (work in progress).
+- **Kinenix Studio** (paused).
 
 ## 4. Experimental
 
 These work, but their behavior may change in a minor release; the CHANGELOG says when:
 
-- The Hub's AI failure analysis (`CENTRAL_LLM_URL`, `POST /api/v1/executions/{id}/reanalyze`). It is being developed further, so a local model explains why a run failed; it joins section 2 in the minor release that finishes it.
-- `ai.decide`, which depends on a specific central model server (`CENTRAL_LLM_URL`).
+- `ai.decide`, which depends on a specific model server (OpenThai-SystemOne).
 - The answers of `ai.prompt` and `ai.extract`: their parameters are stable, but what a model answers depends on the model.
 
 ## 5. Deprecation and removal

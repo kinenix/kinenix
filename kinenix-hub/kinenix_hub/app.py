@@ -13,7 +13,6 @@ from .database import get_db, get_write_db, init_db
 from .models import Worker, Execution
 from .security import require_worker_api_key, require_dashboard_auth, log_auth_mode
 from .services.telemetry_service import record_heartbeat, ingest_execution_log, step_summaries
-from .services.ai_summarizer import analyze_failure
 
 from contextlib import asynccontextmanager
 
@@ -122,7 +121,6 @@ def receive_telemetry(req: TelemetryRequest, db: Session = Depends(get_write_db)
         "execution_id": execution.id,
         "flow_name": execution.flow_name,
         "has_error": execution.has_error,
-        "ai_summary": execution.ai_summary
     }
 
 
@@ -153,33 +151,6 @@ def get_execution_steps(execution_id: str, db: Session = Depends(get_db)):
     if not execution:
         raise HTTPException(status_code=404, detail="Execution not found")
     return {"execution": execution.to_dict(), "steps": step_summaries(execution.raw_log)}
-
-
-@app.post("/api/v1/executions/{execution_id}/reanalyze", dependencies=[Depends(require_worker_api_key)])
-def reanalyze_execution(execution_id: str, db: Session = Depends(get_write_db)):
-    execution = db.query(Execution).filter(Execution.id == execution_id).first()
-    if not execution:
-        raise HTTPException(status_code=404, detail="Execution not found")
-
-    facts = dict(
-        flow_name=execution.flow_name,
-        failed_step_name=execution.failed_step_name,
-        error_message=execution.error_message,
-        exception_class=execution.exception_class,
-        error_type=execution.error_type
-    )
-    # The central LLM may take seconds; do not hold the database's write lock while it answers (#201)
-    db.rollback()
-    ai_res = analyze_failure(**facts)
-    execution.ai_category = ai_res.get("category")
-    execution.ai_confidence = ai_res.get("confidence")
-    execution.ai_summary = ai_res.get("summary")
-    execution.ai_root_cause = ai_res.get("root_cause")
-    execution.ai_suggestion = ai_res.get("suggestion")
-
-    db.commit()
-    db.refresh(execution)
-    return {"status": "reanalyzed", "execution": execution.to_dict()}
 
 
 # ---------------------------------------------------------

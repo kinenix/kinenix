@@ -147,8 +147,8 @@ jobs:
         run: python -m bandit -q -r kinenix-core/kinenix kinenix-hub/kinenix_hub kinenix-worker/kinenix_worker
 
       # The workflows themselves: actions pinned to a commit, no token left on the runner, no ${{ }} in scripts
-      - name: GitHub Actions workflows (zizmor)
-        run: zizmor --offline --min-severity medium .github/workflows
+      - name: GitHub Actions workflows and Dependabot settings (zizmor)
+        run: zizmor --offline --min-severity medium .github
 
   studio-frontend:
     name: Studio frontend build

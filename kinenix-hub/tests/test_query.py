@@ -62,6 +62,14 @@ def test_a_view_with_filters(conn):
     assert hub_query.run(conn, "v_failures", flow="Query Demo", since="2026-10-13").rows == []
 
 
+
+def test_flows_view_takes_since_on_its_last_run(conn):
+    result = hub_query.run(conn, "v_flows", flow="Query Demo", since="2026-10-01")
+    rows = [dict(zip(result.columns, r)) for r in result.rows]
+    assert [(r["flow_name"], r["run_count"], r["last_worker_id"]) for r in rows] == [("Query Demo", 1, "query-worker")]
+    assert '"last_run_at" >= ?' in result.sql
+    assert hub_query.run(conn, "v_flows", flow="Query Demo", since="2026-10-13").rows == []
+
 def test_sql_and_row_limit(conn):
     result = hub_query.run(conn, "SELECT step_name FROM v_steps WHERE flow_name = 'Query Demo' ORDER BY seq;", limit=1)
     assert result.rows == [["Pick Item"]] and result.truncated

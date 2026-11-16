@@ -47,7 +47,7 @@ Each row: the threat, what protects against it today, the gap, and the proposal 
 | T6 | File paths leave their folder: a zip entry such as `../../x`, a user view name, a subflow path | Zip entries are checked against the destination; user views must match `custom_\w+`; relative paths resolve from the bundle | Paths in flows may leave the bundle by design (see T1) | As T1 | As T1 |
 | T7 | Data from a web page or a worker runs as script in the dashboard (XSS) | Every value from a worker is escaped (`escapeHtml`); CodeQL scans the JavaScript | The dashboard loads Tailwind as a script from `cdn.tailwindcss.com`, a third party that could then read every run shown; without internet the dashboard has no styles | Ship the dashboard's CSS in the package, and add a Content-Security-Policy that allows only its own scripts | 1.1.0 (decided 2026-10-29) |
 | T8 | A worker with the key sends false or very large runs, or uses another worker's name | The key is required for writes from other machines | No size limit on telemetry; `worker_id` is not tied to the key | A size limit on telemetry; keys per worker (T3) | 1.1.0 |
-| T9 | Business data leaves the machine without the user meaning it to | Local models by default (`ai.prompt`, `ai.extract` with Ollama); email and HTTP only through actions written in the flow | `ai.decide` and the Hub's AI failure analysis send data to `CENTRAL_LLM_URL`, which may be a remote server | The security guide lists every action and setting that sends data out; the AI failure analysis uses a local model (compatibility.md, section 4) | Guide: after 1.0 |
+| T9 | Business data leaves the machine without the user meaning it to | Local models by default (`ai.prompt`, `ai.extract` with Ollama); email and HTTP only through actions written in the flow | `ai.decide` sends data to the SystemOne server set in the flow, which may be a remote server | The security guide lists every action and setting that sends data out | Guide: after 1.0 |
 | T10 | A compromised dependency, GitHub Action, or release | pip-audit, bandit, zizmor, and CodeQL in CI and weekly; Dependabot; actions pinned to commits; Trusted Publishing to PyPI with attestations; release environments that need approval | Dependencies have only lower bounds, so a new major version reaches users untested | Upper bounds for dependencies whose major versions have broken Kinenix before; an SBOM with each release | Later |
 | T11 | An AI assistant or agent is misled: it puts secrets in `flow.md`, or text from a web page in a log tells an agent what to do (prompt injection) | `AGENTS.md` of every project says secrets go in `.env`; the Redactor; agents have no extra rights | Agents that read run results arrive in 1.1.0 | The agent interface marks tool results as data, and a person confirms every run (design/agent-interface.md, section 9) | 1.1.0 |
 | T12 | `kinenix-worker run --sandbox` is taken for isolation | | It only copies the bundle to `~/.kinenix/workspaces/<job>`; the flow runs with the same rights. The copies, with their `.env` passwords, were never deleted | Say "separate copy", not "isolated"; delete the copy's `.env` files when the run ends (outputs stay). Removing old copies: 1.1.0 | Done (rc1) |
@@ -56,7 +56,7 @@ Each row: the threat, what protects against it today, the gap, and the proposal 
 
 - An attacker who already has the user's account on the worker or Hub machine.
 - Hardening the operating system, physical access, and backups of `hub.db`.
-- Studio (paused, not published) and the ask router (work in progress).
+- Studio (paused, not published).
 
 ## 5. Review plan
 
@@ -69,7 +69,7 @@ The code review for 1.0.0 goes through each threat:
 | T3, T4, T8 | `kinenix_hub/security.py`, `app.py`, `console.py` (setup), `kinenix_worker/hub_client.py` |
 | T5 | `kinenix_hub/query.py`, `views.py` |
 | T7 | `kinenix_hub/static/app.js`, `index.html` |
-| T9 | `actions/ai_*.py`, `kinenix_hub/services/ai_summarizer.py` |
+| T9 | `actions/ai_*.py` |
 | T10 | `.github/workflows/`, the `pyproject.toml` files |
 | T12 | `kinenix_worker/runner.py`, `README.md` |
 
@@ -94,5 +94,5 @@ Checked with no finding (2026-10-29):
 - **T3, T8:** every write endpoint needs the worker key, and every read endpoint needs the dashboard password (or localhost with a local `Host`); keys are compared in constant time; malformed telemetry is recorded as an "Unknown" run instead of failing the Hub.
 - **T5:** see #133.
 - **T7:** every value from a worker that reaches `innerHTML` in `app.js` passes `escapeHtml`, and the modal uses `innerText`.
-- **T9:** `CENTRAL_LLM_URL` and the SystemOne action default to `127.0.0.1`; nothing leaves the machine unless the user sets another address.
+- **T9:** the SystemOne action defaults to `127.0.0.1`, and the Hub calls no model (1.2.0); nothing leaves the machine unless the user sets another address.
 - **T10:** see the CI security checks (#133); dependency upper bounds and an SBOM stay for later.

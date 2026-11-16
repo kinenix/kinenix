@@ -22,7 +22,7 @@ MAX_LIMIT = 10000
 TIME_LIMIT_SECONDS = 10.0
 HIDDEN_OVER_HTTP = {("executions", "raw_log")}
 # The column --since filters on, in order of preference
-TIME_COLUMNS = ("failed_at", "started_at", "start_time", "last_heartbeat", "created_at", "applied_at")
+TIME_COLUMNS = ("failed_at", "started_at", "start_time", "last_run_at", "last_heartbeat", "created_at", "applied_at")
 USER_VIEW_PREFIX = "custom_"
 
 _ALLOWED_ACTIONS = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION,

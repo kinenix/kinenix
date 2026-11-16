@@ -292,3 +292,24 @@ def test_a_step_with_on_error_ignore_does_not_make_the_run_partial():
     continued = {"status": "failed", "failure": {"handled": "continued"}}
     assert run_status({"step_results": [ignored]}) == "success"
     assert run_status({"step_results": [ignored, continued]}) == "partial"
+
+
+def test_flows_view_has_one_row_per_flow_with_its_newest_run():
+    def run(start, worker, **extra):
+        payload = {"flow_name": "Flows View Demo", "start_time": start, "has_error": False,
+                   "metrics": {"total_duration_seconds": 1.0}, **extra}
+        return _ingest(payload, worker_id=worker)
+
+    run("2026-11-01 02:00:00+07:00", "pi-a")
+    run("2026-11-02 02:00:00+07:00", "pi-b", has_error=True,
+        failure_details={"error_type": "Technical", "error_message": "boom"})
+    newest = run("2026-11-03 02:00:00+07:00", "pi-a", interrupted=True)
+    flow = _rows("SELECT * FROM v_flows WHERE flow_name = 'Flows View Demo'", None)
+    assert len(flow) == 1
+    flow = flow[0]
+    assert (flow["run_count"], flow["success_count"], flow["failed_count"], flow["interrupted_count"],
+            flow["partial_count"]) == (3, 1, 1, 1, 0)
+    assert flow["worker_count"] == 2
+    assert flow["first_run_at"].startswith("2026-10-31 19:00:00")
+    assert flow["last_run_at"].startswith("2026-11-02 19:00:00")
+    assert (flow["last_status"], flow["last_worker_id"], flow["last_execution_id"]) == ("interrupted", "pi-a", newest)

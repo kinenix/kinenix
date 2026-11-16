@@ -53,7 +53,7 @@ def hide_uvicorn_bind_url() -> None:
     logging.getLogger("uvicorn.error").addFilter(_HideBindUrl())
 
 
-def print_banner(console: Console, host: str, port: int, llm_url: str, api_key_set: bool, dashboard_password_set: bool) -> None:
+def print_banner(console: Console, host: str, port: int, api_key_set: bool, dashboard_password_set: bool) -> None:
     remote = host in ("0.0.0.0", "::")  # nosec B104: a comparison, nothing is bound here
     grid = Table.grid(padding=(0, 2))
     grid.add_column(style="bold cyan", no_wrap=True)
@@ -72,7 +72,6 @@ def print_banner(console: Console, host: str, port: int, llm_url: str, api_key_s
         grid.add_row("Connect a worker", Text(f"kinenix connect {urls[1]}", style="bold") + Text("  (key: kinenix hub show-key)", style="dim"))
     grid.add_row("Worker API key", Text("set", style="green") if api_key_set else Text("not set: localhost workers only", style="yellow"))
     grid.add_row("Dashboard login", Text("set", style="green") if dashboard_password_set else Text("not set: localhost viewers only", style="yellow"))
-    grid.add_row("Central LLM", llm_url)
 
     console.print(Panel(grid, title="[bold]Kinenix Hub[/]", subtitle="[dim]Ctrl+C to stop[/]",
                         border_style="cyan", expand=False))
@@ -265,7 +264,7 @@ def print_status(console: Console, base_url: str, data: Dict[str, Any], now: Opt
     for e in data["executions"]:
         failure = "-"
         if e.get("has_error"):
-            failure = e.get("ai_summary") or e.get("error_message") or e.get("failed_step_name") or "failed"
+            failure = e.get("error_message") or e.get("failed_step_name") or "failed"
         elif e.get("status") == "partial":
             failure = partial_text(e.get("details"))
         elif e.get("status") == "interrupted":
@@ -355,10 +354,6 @@ def print_execution_log(console: Console, data: Dict[str, Any], now: Optional[da
     if failed:
         header.add_row("Failed step", Text(e.get("failed_step_name") or e.get("failed_step_id") or "-", style="red"))
         header.add_row("Error", Text(e.get("error_message") or "-", style="red"))
-        if e.get("ai_summary"):
-            header.add_row("AI summary", Text(e["ai_summary"]))
-        if e.get("ai_suggestion"):
-            header.add_row("Suggestion", Text(e["ai_suggestion"]))
     console.print(Panel(header, title="[bold]Execution[/]", border_style="red" if failed else "green", expand=False))
 
     steps = data.get("steps") or []

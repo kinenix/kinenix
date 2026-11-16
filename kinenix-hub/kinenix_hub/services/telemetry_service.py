@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 
 from ..models import Execution, Worker
 from ..timeutils import parse_timestamp, utc_now
-from .ai_summarizer import analyze_failure
 from .run_records import build_run_records, execution_run, run_status, store_run_records
 
 logger = logging.getLogger("kinenix.hub.telemetry")
@@ -144,20 +143,6 @@ def ingest_execution_log(db: Session, payload: Dict[str, Any], worker_id: str = 
         execution.error_message = failure_details.get("error_message")
         # Workers send error_screenshot_path (schemas/execution_log.schema.json); screenshot_path is the older name
         execution.screenshot_path = failure_details.get("error_screenshot_path") or failure_details.get("screenshot_path")
-
-        # Run AI Triage & Summarization
-        ai_res = analyze_failure(
-            flow_name=flow_name,
-            failed_step_name=execution.failed_step_name,
-            error_message=execution.error_message,
-            exception_class=execution.exception_class,
-            error_type=execution.error_type
-        )
-        execution.ai_category = ai_res.get("category")
-        execution.ai_confidence = ai_res.get("confidence")
-        execution.ai_summary = ai_res.get("summary")
-        execution.ai_root_cause = ai_res.get("root_cause")
-        execution.ai_suggestion = ai_res.get("suggestion")
 
     db.add(execution)
     try:

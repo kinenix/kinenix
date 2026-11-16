@@ -100,13 +100,34 @@ SELECT
 FROM step_results s
 LEFT JOIN executions e ON e.id = s.execution_id
 """,  # nosec B608: fixed SQL
+    # One row per flow the Hub has a run of. The "last_" columns come from the newest run of the flow.
+    "v_flows": """
+SELECT
+    e.flow_name,
+    COUNT(*) AS run_count,
+    SUM(CASE WHEN e.status = 'success' THEN 1 ELSE 0 END) AS success_count,
+    SUM(CASE WHEN e.status = 'partial' THEN 1 ELSE 0 END) AS partial_count,
+    SUM(CASE WHEN e.status = 'failed' THEN 1 ELSE 0 END) AS failed_count,
+    SUM(CASE WHEN e.status = 'interrupted' THEN 1 ELSE 0 END) AS interrupted_count,
+    COUNT(DISTINCT e.worker_id) AS worker_count,
+    MIN(e.start_time) AS first_run_at,
+    MAX(e.start_time) AS last_run_at,
+    (SELECT l.status FROM executions l WHERE l.flow_name = e.flow_name
+     ORDER BY l.start_time DESC, l.created_at DESC LIMIT 1) AS last_status,
+    (SELECT l.worker_id FROM executions l WHERE l.flow_name = e.flow_name
+     ORDER BY l.start_time DESC, l.created_at DESC LIMIT 1) AS last_worker_id,
+    (SELECT l.id FROM executions l WHERE l.flow_name = e.flow_name
+     ORDER BY l.start_time DESC, l.created_at DESC LIMIT 1) AS last_execution_id
+FROM executions e
+GROUP BY e.flow_name
+""",  # nosec B608: fixed SQL
 }
 
 
 def create_views(engine: Engine) -> None:
     """Drops and creates the Kinenix views, so they always match this Hub version."""
     if engine.dialect.name != "sqlite":
-        logger.warning("Hub views (v_runs, v_failures, v_steps) are only created on SQLite.")
+        logger.warning("Hub views (v_runs, v_failures, v_steps, v_flows) are only created on SQLite.")
         return
     with engine.begin() as conn:
         for name, select in VIEWS.items():

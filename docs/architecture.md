@@ -6,12 +6,12 @@ This document describes how Kinenix is structured: its principles, modules, exec
 
 ## 1. Core Principles
 
-- **Local AI-Native:** Designed for on-device Small Language Models (SLMs) running on CPU (e.g. Qwen 2.5, Llama 3.2 via Ollama, llama.cpp, or ONNX). AI powers extraction, decision steps, and failure diagnosis with no cloud token costs and no business data leaving the network.
+- **Local AI-Native:** Designed for on-device Small Language Models (SLMs) running on CPU (e.g. Qwen 2.5, Llama 3.2 via Ollama, llama.cpp, or ONNX). AI powers extraction and decision steps in flows with no cloud token costs and no business data leaving the network.
 - **Deterministic first, agentic second:** Flows execute deterministically step by step. AI is used inside explicit actions (`ai.*`) or as an observer, never as a hidden replacement for flow logic.
 - **Zero-license Office dependency:** Spreadsheet processing uses file-level libraries (`openpyxl`, `pandas`). Microsoft Excel or Microsoft 365 is never required.
 - **Business-first telemetry:** Logs and dashboards report business outcomes (transactions, hours saved, cost saved), not only stack traces.
 - **Free, unlimited workers:** No per-bot licensing. Workers run on any PC, VM, or edge device such as a Raspberry Pi.
-- **Flows as code:** Flows are declarative JSON/Markdown files versioned in Git, not opaque binary packages.
+- **Flows as code:** A flow is a Markdown file (`flow.md`) versioned in Git. A deployed package (`.kinx`) is a signed zip of the same files, not an opaque binary.
 - **Extensible in Python:** New actions are Python classes registered with the action registry.
 
 ---
@@ -21,9 +21,9 @@ This document describes how Kinenix is structured: its principles, modules, exec
 | Module | Role | Current implementation | Target |
 | :--- | :--- | :--- | :--- |
 | **`kinenix-core`** | Flow interpreter, variable evaluator, action plugins, `kinenix` CLI | Python 3.12+, Pydantic, Playwright, openpyxl, pandas | Same |
-| **`kinenix-worker`** | Runs flows unattended on target machines | CLI with `run`, `watch`, `schedule`, `daemon`; optional separate copy of the bundle per run (`--sandbox`, not isolation) | Persistent WebSocket client receiving jobs from the Hub |
+| **`kinenix-worker`** | Runs flows unattended on target machines | CLI with `run`, `watch`, `schedule`, `daemon`; optional separate copy of the bundle per run (`--sandbox`, not isolation) | Long-poll client that receives confirmed jobs and signed flow packages from the Hub (1.5.0) |
 | **`kinenix-studio`** | Flow authoring and debugging | FastAPI backend + React/Vite web UI: flow discovery, editing, validation, run | Tauri desktop shell, persistent browser sessions, element picker, live debugger |
-| **`kinenix-hub`** | Central monitoring and control | FastAPI + SQLAlchemy (SQLite default); receives heartbeats and telemetry over HTTP; web dashboard; AI failure summaries; API key auth | Job dispatch over WebSocket, PostgreSQL + Redis queue, ROI dashboard, LINE/Teams/Email alerts |
+| **`kinenix-hub`** | Central monitoring and control | FastAPI + SQLAlchemy (SQLite default); receives heartbeats and telemetry over HTTP; web dashboard; API key auth | Job dispatch and flow delivery over long polling (1.5.0), PostgreSQL, ROI dashboard |
 
 ### Current Data Flow
 
@@ -36,18 +36,18 @@ graph LR
     Core <-->|HTTP| AI["Local AI<br>(Ollama / SystemOne)"]
     Core -->|JSON logs| Logs["logs/"]
     Core -->|HTTP telemetry + X-API-Key| Orch["kinenix-hub"]
-    Orch <-->|HTTP| AI
 ```
 
 ### Target Architecture
 
 ```mermaid
 graph TD
-    Studio["Kinenix Studio<br>Visual designer and inspector"] -->|Deploy bundle| Hub["Kinenix Hub<br>Scheduling, ROI dashboard, alerts"]
-    Hub -->|Dispatch job via WebSocket| Worker["Kinenix Worker<br>Daemon on VM / PC / edge device"]
+    Build["Building machine<br>kinenix pack signs a .kinx package"] -->|kinenix publish| Hub["Kinenix Hub<br>Packages, confirmed jobs, run records"]
+    Worker["Kinenix Worker<br>Daemon on VM / PC / edge device"] -->|Long poll: jobs and packages| Hub
     Worker -->|Execute flow| Core["Kinenix Core<br>Interpreter engine"]
     Core <-->|HTTP REST / JSON| AI["Local SLM sidecar<br>Ollama / llama.cpp"]
-    Worker -->|Stream logs and screenshots| Hub
+    Worker -->|Telemetry and heartbeats| Hub
+    Agent["AI agents such as kytnix"] -->|Read-only queries| Hub
 ```
 
 ---
@@ -98,12 +98,11 @@ Flows are organized as self-contained project bundles; see [project_bundles.md](
 
 ## 4. AI Integration
 
-AI runs as a **decoupled sidecar**. `kinenix-core` stays lightweight and can run every non-AI flow without any ML runtime installed.
+AI runs as a **decoupled sidecar**, only in flow actions. The Hub calls no model: the cause and fix of a failure are written by the worker's own rules (`engine/action_errors.py`, `engine/web_errors.py`), and agents such as [kytnix](https://github.com/kinenix/kytnix) read them from the Hub. `kinenix-core` stays lightweight and can run every non-AI flow without any ML runtime installed.
 
 | Where | What it does | Implementation |
 | :--- | :--- | :--- |
 | Flow actions | `ai.prompt` (JSON-constrained prompts), `ai.extract` (structured fields from text or images), `ai.decide` | Ollama and OpenThai-SystemOne over HTTP (`kinenix-core/kinenix/actions/ai_*.py`) |
-| Hub | Classifies failures and suggests fixes from execution telemetry | `kinenix-hub/kinenix_hub/services/ai_summarizer.py`, with a rule-based fallback when the LLM is unreachable |
 
 See [actions_reference.md](actions_reference.md) for action parameters and [rpa-challenge-ocr in kinenix/examples](https://github.com/kinenix/examples/tree/main/rpa-challenge-ocr) for an end-to-end example.
 
@@ -111,27 +110,11 @@ Planned: self-healing selectors, a Studio copilot for natural-language flow auth
 
 ---
 
-## 5. Agent-to-Agent Hybrid Protocol (Planned)
+## 5. Hub and Worker Communication
 
-Communication between the Hub and Workers will use a **Hybrid Protocol**:
+**Today:** workers push telemetry and heartbeats to the Hub over HTTP (`POST /api/v1/telemetry`) with the worker key; see [hub.md](hub.md). A run record carries both machine fields (status, counts, error codes) and a Markdown report (`report_md` in `v_runs`) that people and AI agents read.
 
-- **State envelope (JSON over WebSocket):** Deterministic machine fields (`type`, `job_id`, `status`, `metrics`, error codes) with state transitions `PENDING`, `RUNNING`, `SUCCESS`, `FAILED`. Workers never share state through mounted disks.
-- **Cognitive payload (Markdown inside JSON):** An `agent_report_md` field carries a natural-language incident summary for AI agents and humans, used to decide recovery (auto-retry vs. human escalation).
-
-```text
-[ Worker Agent ] --- persistent WebSocket ---> [ Hub Agent ]
-{
-   "type": "JOB_REPORT",
-   "job_id": "job_20260916_001",
-   "status": "FAILED",                        <-- JSON state envelope
-   "duration": 14.2,
-   "agent_report_md": "# Incident Summary\n"  <-- Markdown payload
-                      "- **Root Cause:** Target input selector shifted.\n"
-                      "- **Recommendation:** Trigger self-healing selector."
-}
-```
-
-Today, workers send telemetry to the Hub over HTTP (`POST /api/v1/telemetry`); see [hub.md](hub.md).
+**Planned for 1.5.0** (decided 2026-11-12 and 2026-11-14, replacing a WebSocket protocol planned before): the worker keeps one long-poll request open to the Hub (`GET /api/v1/jobs/next`), so it opens no port. The answer is a job a person confirmed on the dashboard, for a flow already on the worker that its owner allowed, or a signed flow package to install. Workers report runs as today. Details: [design/agent-interface.md](design/agent-interface.md), section 14, and [design/flow-deploy.md](design/flow-deploy.md).
 
 ---
 
@@ -140,7 +123,7 @@ Today, workers send telemetry to the Hub over HTTP (`POST /api/v1/telemetry`); s
 1. **Author:** Build and tune flows locally with the CLI or `kinenix-studio`.
 2. **Version:** Commit `flow.md`, `subflows/`, `config/`, and assets to Git.
 3. **Validate:** CI runs `pytest` and flow schema validation on every pull request.
-4. **Release:** Hub and workers pull approved, versioned bundles via Git tags, release branches, or webhooks.
+4. **Release:** `kinenix pack` builds a signed `.kinx` package of a version, and workers install it from a file or, from 1.5.0, from the Hub ([design/flow-deploy.md](design/flow-deploy.md)).
 
 ---
 

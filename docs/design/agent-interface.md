@@ -202,7 +202,7 @@ The Hub starts a run on a worker, decided 2026-11-12:
 ## 15. Out of scope
 
 - Agents changing flows and running them without a person seeing the change (section 12).
-- `kinenix ask` and free-form chat inside Kinenix: the agent talks to the person (decided 2026-11-12; [ask_router.md](../ask_router.md) waits for a Kinenix agent of its own).
+- `kinenix ask` and free-form chat inside Kinenix: the agent talks to the person (decided 2026-11-12). The ask router was removed in 1.2.0; [kytnix](https://github.com/kinenix/kytnix) is a separate agent.
 - Sending flow data to a cloud model from Kinenix itself. A cloud agent that the user connects sees what the tools return, which is redacted.
 - WebSocket dispatch and log streaming (long polling is enough for now).
 

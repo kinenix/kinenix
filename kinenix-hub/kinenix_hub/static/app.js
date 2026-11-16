@@ -151,7 +151,7 @@ function renderExecutions(executions) {
         </button>`;
     const actionCell = isError
       ? `<div class="inline-flex gap-2">${stepsButton}<button data-id="${escapeHtml(e.id)}" onclick="openModal(this.dataset.id)" class="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 font-medium inline-flex items-center gap-1.5 transition">
-          ดู AI สรุป
+          ดูสาเหตุ
         </button></div>`
       : stepsButton;
 
@@ -184,23 +184,39 @@ function filterExecutions(filter) {
   renderExecutions(allExecutions);
 }
 
-function openModal(executionId) {
+async function openModal(executionId) {
   const item = allExecutions.find(e => e.id === executionId);
   if (!item) return;
 
   document.getElementById('modal-flow-name').innerText = `Flow: ${item.flow_name} (${item.failed_step_name || item.failed_step_id || 'Failed Step'})`;
   document.getElementById('modal-worker-info').innerText = `Worker Node: ${item.worker_id} • เวลา: ${formatDateTime(item.start_time)}`;
   
-  document.getElementById('modal-confidence').innerText = item.ai_confidence ? `Confidence: ${item.ai_confidence}%` : 'Classified';
-  document.getElementById('modal-summary').innerText = item.ai_summary || item.error_message || 'ไม่มีบทสรุป AI';
-  document.getElementById('modal-root-cause').innerText = item.ai_root_cause || item.error_type || '-';
-  document.getElementById('modal-suggestion').innerText = item.ai_suggestion || 'ตรวจสอบ Log หรือคอนฟิกพารามิเตอร์ของ Step';
+  document.getElementById('modal-summary').innerText = item.error_message || '-';
+  document.getElementById('modal-root-cause').innerText = 'กำลังโหลด...';
+  document.getElementById('modal-suggestion').innerText = '';
 
   document.getElementById('modal-traceback').innerText = item.error_message 
     ? `${item.exception_class || 'Exception'}: ${item.error_message}\nStep: ${item.failed_step_id} (${item.failed_step_name})`
     : 'No traceback details recorded.';
 
   document.getElementById('ai-modal').classList.remove('hidden');
+
+  // The cause and fix are the worker's diagnosis of the failed step (root_cause, suggested_fix)
+  let failed = null;
+  try {
+    const res = await fetch(`/api/v1/executions/${encodeURIComponent(executionId)}/steps`);
+    if (res.ok) {
+      const steps = (await res.json()).steps || [];
+      failed = steps.find(s => s.status === 'failed' && s.root_cause) || null;
+    }
+  } catch (err) {
+    failed = null;
+  }
+  // Runs recorded before 1.2.0 may still carry the Hub's own analysis in ai_root_cause and ai_suggestion
+  document.getElementById('modal-root-cause').innerText =
+    (failed && failed.root_cause) || item.ai_root_cause || item.error_type || '-';
+  document.getElementById('modal-suggestion').innerText =
+    (failed && failed.suggested_fix) || item.ai_suggestion || 'ดูขั้นที่ล้มด้วยปุ่ม ดู Steps';
 }
 
 function closeModal() {

@@ -61,9 +61,6 @@ if "DATABASE_URL" not in os.environ:
 # User views: custom_*.sql files applied at every start (views.py, docs/hub.md)
 VIEWS_DIR = Path(_setting("KINENIX_HUB_VIEWS_DIR", str(Path.home() / ".kinenix" / "hub_views"))).expanduser()
 
-# Central LLM Endpoint (OpenThai-SystemOne server on port 8000)
-CENTRAL_LLM_URL = os.environ.get("CENTRAL_LLM_URL", "http://127.0.0.1:8000/v1/systemone")
-
 # Server binding: localhost by default; set KINENIX_HUB_HOST=0.0.0.0 to accept remote workers and viewers
 HOST = _setting("KINENIX_HUB_HOST", "127.0.0.1")
 PORT = int(_setting("KINENIX_HUB_PORT", "8080"))

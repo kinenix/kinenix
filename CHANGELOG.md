@@ -2,6 +2,24 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## 1.2.0 (2026-11-16)
+
+Flows on the Hub: a view that counts flows and shows how each one is doing, and a Hub that calls no model. Nothing promised in 1.0.0 changes ([docs/compatibility.md](docs/compatibility.md)).
+
+### Upgrading from 1.1.0
+
+- Upgrade the Hub first, as usual. The view `v_flows` is created at its next start.
+- `CENTRAL_LLM_URL` can be removed from the Hub's environment; it is ignored.
+
+### Added
+
+- **The Hub view `v_flows`**: one row per flow the Hub has a run of, with its run count by status, its workers, its first and newest run, and the status, worker, and id of its newest run. It answers "how many flows run, and how is each one doing?" without counting rows of `v_runs`, for people (`kinenix hub query v_flows --since 30d`) and for agents through the Hub's query API. `--since` keeps the flows whose newest run is that recent. A flow that never ran is not on the Hub; `kinenix list` on its worker shows it. [docs/hub_data.md](docs/hub_data.md#v_flows).
+
+### Removed
+
+- **The Hub's AI failure analysis** (`CENTRAL_LLM_URL`, `POST /api/v1/executions/{id}/reanalyze`). Neither is part of the stability promise: the variable is not a `KINENIX_*` setting, and workers and `kinenix hub` never call the endpoint ([docs/compatibility.md](docs/compatibility.md), section 2). The Hub calls no model now. The cause and fix of a failure come from the worker's rules, as before, in `root_cause` and `suggested_fix` of `v_failures`; the dashboard's failure window, `kinenix hub logs`, and agents read them there. The `ai_*` columns of `executions` stay, empty for new runs, so runs recorded before keep their values.
+- **The ask router** (natural-language questions to the Hub), which was work in progress. Kinenix stays an RPA tool; questions and alerts belong to agents that read the Hub, such as [kytnix](https://github.com/kinenix/kytnix).
+
 ## 1.1.0 (2026-11-13)
 
 Flow data tools: lists, loop control, and error handling for the flows that AI assistants write, and checks that catch their mistakes before a run. It contains everything in 1.1.0rc1 (below) and the changes listed here. Nothing promised in 1.0.0 changes ([docs/compatibility.md](docs/compatibility.md)).

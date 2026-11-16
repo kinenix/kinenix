@@ -39,7 +39,7 @@ cd kinenix-core; ../.venv/Scripts/python.exe -m pytest -q; cd ..
 # Security checks (CI job "Security checks"; .agents/rules/security.md)
 .venv/Scripts/python.exe -m pip install pip-audit bandit zizmor
 .venv/Scripts/python.exe -m bandit -q -r kinenix-core/kinenix kinenix-hub/kinenix_hub kinenix-worker/kinenix_worker -x "*/build/*"
-.venv/Scripts/zizmor.exe --offline --min-severity medium .github/workflows
+.venv/Scripts/zizmor.exe --offline --min-severity medium .github
 
 # Studio frontend
 cd kinenix-studio/frontend; npm ci; npm run build
@@ -116,7 +116,7 @@ Some rule files and the README describe the target architecture, not what exists
 | Action tests | `kinenix-core/tests/actions/` | Tests live directly in `kinenix-core/tests/` |
 | Studio | Tauri desktop app | FastAPI + React/Vite in the browser; paused, do not extend without asking |
 | Hub backend | Async handlers, PostgreSQL, Redis/Celery | Sync handlers, SQLite by default, no queue |
-| Worker communication | WebSocket job dispatch and log streaming | Workers push telemetry and heartbeats over HTTP; no dispatch |
+| Worker communication | Job dispatch and flow delivery over HTTP long polling (1.5.0; `docs/design/agent-interface.md` section 14, `docs/design/flow-deploy.md`) | Workers push telemetry and heartbeats over HTTP; no dispatch |
 
 When you change code so that it matches a target, update this table and `docs/roadmap.md`.
 
@@ -137,7 +137,6 @@ When you change code so that it matches a target, update this table and `docs/ro
 | `KINENIX_HUB_VIEWS_DIR` | kinenix-hub | Folder of user views (`custom_*.sql`) created at every Hub start (default `~/.kinenix/hub_views`) |
 | `KINENIX_HUB_WORKER_OFFLINE_SECONDS` | kinenix-hub | Seconds without a heartbeat before a worker shows as offline (default 90) |
 | `DATABASE_URL` | kinenix-hub | SQLAlchemy connection string |
-| `CENTRAL_LLM_URL` | kinenix-hub | LLM endpoint for failure analysis |
 
 ## Keeping This File Accurate
 
