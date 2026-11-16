@@ -2,6 +2,12 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
+## Unreleased
+
+### Added
+
+- **New-release notice in the CLI**: when a newer Kinenix is on PyPI, a `kinenix` command run at a terminal ends with one notice on stderr, giving the new version, the `pip install --upgrade` command for the packages installed here, and a link to this file. It asks `https://pypi.org/pypi/kinenix/json` at most once a day, in the background, waits for it at most 2 seconds, and keeps the answer in `~/.kinenix/update_check.json`. It sends no flow data and no machine id. There is no check when output does not go to a terminal, in CI (`CI` set), with `--json` or `--format json`, for `kinenix hub start`, or for a worker running flows from its triggers. `KINENIX_NO_UPDATE_CHECK=1` turns it off. `kinenix version` now also shows the latest release. [docs/cli_guide.md](docs/cli_guide.md#21-check-version-and-environment-version).
+
 ## 1.2.0 (2026-11-16)
 
 Flows on the Hub: a view that counts flows and shows how each one is doing, and a Hub that calls no model. Nothing promised in 1.0.0 changes ([docs/compatibility.md](docs/compatibility.md)).

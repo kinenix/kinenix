@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from . import __version__, exit_codes
+from . import __version__, exit_codes, update_check
 from .models.context import local_now
 from .models.flow import FlowDefinition
 from .engine.interpreter import FlowInterpreter, new_run_id
@@ -186,6 +186,25 @@ def resolve_flow_path(flow_input: str) -> Optional[Path]:
 
 
 def main():
+    """Entry point: runs the command, then says when a newer release is on PyPI (update_check.py)."""
+    argv = sys.argv[1:]
+    check = None
+    # `kinenix version` asks PyPI itself and prints the answer
+    if argv[:1] != ["version"] and update_check.should_check(argv):
+        check = update_check.UpdateCheck(__version__)
+        check.start()
+    try:
+        _main()
+    except SystemExit:
+        if check is not None:
+            check.finish()
+        raise
+    else:
+        if check is not None:
+            check.finish()
+
+
+def _main():
     parser = argparse.ArgumentParser(prog="kinenix", description="kinenix - Enterprise RPA CLI Runner")
     parser.add_argument("-v", "--version", action="version", version=f"kinenix {__version__}")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -308,6 +327,15 @@ def main():
         print(f"Kinenix:      v{__version__}")
         print(f"Python:       {platform.python_version()} ({platform.python_implementation()})")
         print(f"Platform:     {platform.system()} {platform.release()} ({platform.machine()})")
+        if update_check.should_check(sys.argv[1:], sys.stdout):
+            include_prereleases = update_check.is_prerelease(__version__)
+            latest = update_check.fetch_latest(include_prereleases)
+            if latest is None:
+                print("Latest:       unknown (PyPI did not answer)")
+            elif update_check.newer_version(__version__, latest):
+                print(f"Latest:       v{latest} (upgrade: {update_check.upgrade_command()})")
+            else:
+                print(f"Latest:       v{latest} (up to date)")
         sys.exit(0)
 
     elif args.command == "install-browsers":

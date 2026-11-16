@@ -38,6 +38,24 @@ Outputs runtime details including kinenix version, Python runtime, operating sys
 kinenix version
 ```
 
+At a terminal it also asks PyPI for the latest release and shows it, with the upgrade command when it is newer.
+
+**New-release notice.** When a newer release is on PyPI, any `kinenix` command run at a terminal ends with a notice on stderr:
+
+```text
+A new Kinenix release is available: 1.2.0 -> 1.3.0
+Upgrade: pip install --upgrade "kinenix[hub,worker]"
+Changes: https://github.com/kinenix/kinenix/blob/main/CHANGELOG.md
+(Turn this message off with KINENIX_NO_UPDATE_CHECK=1)
+```
+
+- Kinenix asks `https://pypi.org/pypi/kinenix/json` at most once a day, in the background, and keeps the answer in `update_check.json` next to the saved settings (`~/.kinenix/` by default). The request holds only the package name: no flow data, no machine id.
+- A command waits for PyPI at most 2 seconds, and only on the run that asks. Without internet the notice does not appear.
+- A pre-release (`1.3.0rc1`) is offered only to a machine that already runs a pre-release.
+- There is no check when the output does not go to a terminal (scripts, services, pipes), when `CI` is set, with `--json` or `--format json`, for `kinenix hub start`, or when a worker runs flows from its triggers.
+- `KINENIX_NO_UPDATE_CHECK=1` turns the check off, for example on machines that must not reach the internet.
+- Nothing is upgraded for you: a person runs the `pip` command.
+
 ### 2.2 Install Playwright Browsers (`install-browsers`)
 Downloads the Chromium browser binary required for Web automation tasks:
 
