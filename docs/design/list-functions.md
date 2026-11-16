@@ -68,7 +68,7 @@ L5 changes decision E4 of expressions.md. E4 kept comparisons out so equality ha
 | :--- | :--- | :--- |
 | Comparison | `${price < config.cheap_limit}`, `${row.status == 'Active'}` | `true` or `false`, by the rules of conditions (section 6) |
 | `and`, `or`, `not` | `${in_stock and price < 20}`, `${not done}` | `true` or `false`; `and` and `or` stop at the first deciding side |
-| Parentheses | `${(a or b) and c}` | Grouping, inside `${...}` only. A step's `condition` still has no parentheses (#195, 1.2.0) |
+| Parentheses | `${(a or b) and c}` | Grouping, inside `${...}` only. A step's `condition` still has no parentheses (#195, 1.6.0) |
 
 Still not allowed: `a if b else c` (use `ifelse`), lambdas, comprehensions, method calls, and every function outside the list.
 
@@ -137,4 +137,4 @@ Either of two comparisons (`or`) is not covered: two `where` calls and a loop th
 
 ## 11. Out of scope
 
-`logic.filter` with `or` (section 7); grouping (`group_by`) and joining two lists (a later issue if a real flow needs them); regular expressions; user-defined functions or lambdas (never); parentheses in a step's `condition` (#195, 1.2.0).
+`logic.filter` with `or` (section 7); grouping (`group_by`) and joining two lists (a later issue if a real flow needs them); regular expressions; user-defined functions or lambdas (never); parentheses in a step's `condition` (#195, 1.6.0).

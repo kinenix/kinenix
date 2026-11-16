@@ -21,11 +21,12 @@ Toward 1.0.0, a `flow.md` written for 1.0 keeps running on every 1.x version.
 | 0.5.0b1: Proven on business flows | A tutorial and a business example, run by CI with a real browser, and testing flows against saved pages | 2026-10-28 | Released |
 | 1.0.0: Stable core | A core that can be trusted, with a written stability promise | 2026-11-10 | Released |
 | 1.0.1: Fixes | Bugs found after 1.0.0: Hub writes that met (#201), `.env` parsing and interval triggers (#171), worker trigger logs (#156) | 2026-11-11 | Released |
-| 1.1.0: Flow data tools | Fix what real flows written by AI assistants ran into: sorting, filtering, and totals on lists, shorter conditions, loops that stop early, clearer errors | After 1.0.0 | Planned |
-| 1.2.0: Developer tools | See and check flows in the editor | After 1.1.0 | Planned |
+| 1.1.0: Flow data tools | Fix what real flows written by AI assistants ran into: sorting, filtering, and totals on lists, shorter conditions, loops that stop early, clearer errors | 2026-11-13 | Released |
+| 1.2.0: Flows on the Hub | Count flows and see how each one is doing on the Hub; the Hub calls no model | 2026-11-16 | Released |
 | 1.3.0: Hardening and docs | Close the open findings of the threat model, a security guide, and the website organized by purpose | After 1.2.0 | Planned |
 | 1.4.0: Daily results you can trust | Kinenix knows whether each day's work really succeeded: expected outputs, missed runs, schedules managed by command | After 1.3.0 | Planned |
 | 1.5.0: Works with AI agents | AI agents use Kinenix like an employee: build a flow for a person to review, run the day's flows, and report what failed or did not run | After 1.4.0 | Planned |
+| 1.6.0: Developer tools | See and check flows in the editor | After 1.5.0 | Planned |
 
 ### 0.2.0b3: Silent bugs and docs
 
@@ -158,7 +159,7 @@ Release:
 
 **Compatibility:** no breaking change from 0.5.0b1. Deprecated names keep working, with a warning, until 2.0.
 
-**Out of scope (after 1.0.0):** the agent interface, MCP server, and job dispatch (1.5.0); developer tools (1.2.0); a Hub service installer and a Docker image; `kinenix connect --name` and finding the Hub on the LAN automatically; `kinenix record`; PostgreSQL; Studio (paused).
+**Out of scope (after 1.0.0):** the agent interface, MCP server, and job dispatch (1.5.0); developer tools (1.6.0); a Hub service installer and a Docker image; `kinenix connect --name` and finding the Hub on the LAN automatically; `kinenix record`; PostgreSQL; Studio (paused).
 
 ### Later: measured limits
 
@@ -177,6 +178,17 @@ Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0
 
 - [x] Release `1.1.0rc1` (2026-11-12) with #142, #143, #144, #173, #191, #192, #193, and #197, to test them on real flows (books.toscrape)
 - [x] Release `1.1.0` (2026-11-13) with #146, #150, #151, #153, #162, #198, and #219 added
+
+### 1.2.0: Flows on the Hub
+
+**Goal:** answer "how many flows run here, and how is each one doing?" from the Hub, for people and for agents such as kytnix, and keep the Hub free of model calls.
+
+**Compatibility:** additions, and the removal of parts outside the stability promise; nothing promised in 1.0.0 changes.
+
+- [x] Hub view `v_flows`, one row per flow (#230)
+- [x] The Hub's AI failure analysis and the ask router removed (#229)
+- [x] Design of deploying flows to workers approved ([design/flow-deploy.md](design/flow-deploy.md), #231)
+- [x] Release `1.2.0` (2026-11-16)
 
 ### 1.3.0: Hardening and docs
 
@@ -220,7 +232,9 @@ Docs and release:
 
 **Out of scope:** agents changing flows and running them without a person seeing the change; general conversation inside Kinenix beyond `kinenix ask`; sending flow data to a cloud model from Kinenix itself.
 
-### 1.2.0: Developer tools
+### 1.6.0: Developer tools
+
+Was 1.2.0 until 2026-11-16, when 1.2.0 became a small release for the Hub; the tools come after the agent work.
 
 **Goal:** see and check flows in the editor: a flow diagram from `flow.md`, then a VS Code extension with problems, completion, and a live diagram. `flow.md` stays the source; diagrams are read-only views.
 
@@ -239,7 +253,7 @@ Ordered so that safety and predictable runtime behavior come before new distribu
 | 5 | Hub dashboard authentication, CORS, and safe default host | Done |
 | 6 | Date actions for scheduled flows (`date.calc`) | Done |
 | 7 | `kinenix record` (record browser steps) and `kinenix inspect` (list page elements, test a selector), with an `## Elements` section in `flow.md` that names each selector once; replaces the Studio element picker | Planned |
-| 8 | Worker WebSocket protocol and job dispatch from the Hub | Not started |
+| 8 | Job dispatch from the Hub over long polling, and flow packages delivered to workers (1.5.0) | Not started |
 | - | Persistent Studio sessions, single-step execution, and live telemetry | Paused with Studio |
 
 ### 1.4 Continuous Integration
@@ -272,20 +286,13 @@ GitHub Actions workflow `.github/workflows/ci.yml` runs on pushes and pull reque
 - Add breakpoints and an element picker that returns robust selector candidates.
 - Define session ownership, expiration, cleanup, and isolation so sessions do not leak browser processes.
 
-### 1.7 Worker WebSocket Protocol and Hub Dispatch
+### 1.7 Job Dispatch and Flow Delivery
 
-```text
-Hub -> versioned job bundle -> Worker (WebSocket) -> kinenix-core executes flow
-                                              |
-                                              +-> status, logs, metrics, screenshots -> Hub
-```
+Decided on 2026-11-12 and 2026-11-14, replacing the WebSocket protocol planned before:
 
-- Authenticate workers and authorize job delivery (per-worker credentials).
-- Require job acknowledgement and use idempotency keys to prevent duplicate execution after reconnects.
-- Support reconnects, cancellation, timeouts, heartbeats, and clear job state transitions.
-- Package and version bundles so a worker runs the intended immutable artifact.
-- Upload execution artifacts safely and retain structured audit logs.
-- Follow the Hybrid Protocol in [architecture.md](architecture.md#5-agent-to-agent-hybrid-protocol-planned).
+- **Job dispatch** ([design/agent-interface.md](design/agent-interface.md), section 14): the worker keeps one long-poll request open to the Hub with its worker key, so it opens no port. It runs only flows already on it that its owner allowed, and a person confirms every job on the dashboard.
+- **Flow delivery** ([design/flow-deploy.md](design/flow-deploy.md)): flows travel as signed `.kinx` packages. The worker pulls them through the same long poll and installs only packages signed by a publisher its owner trusts.
+- Later, if needed: cancellation, live log streaming, and per-worker credentials (threat model T3).
 
 ---
 
@@ -354,7 +361,7 @@ Paused on 2026-10-08. Flows are written as `flow.md` from a `requirements.md` wi
 - [x] systemd service installed by the setup script (`install_service.sh`), starts the daemon at boot
 - [x] `kinenix-worker service install` and `uninstall` for workers installed with pip (#153)
 - [x] Cron schedules (`"cron": "0 8 1 * *"` in `triggers.json`, `kinenix-worker schedule --cron`)
-- [ ] WebSocket job client (see 1.7)
+- [ ] Job client over long polling (see 1.7)
 - [ ] Bundle packaging (`.kinx`), download, and local cache
 - [ ] Real-time log and screenshot streaming
 
