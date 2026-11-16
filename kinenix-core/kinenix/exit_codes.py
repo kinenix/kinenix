@@ -18,7 +18,8 @@ PARTIAL = 8        # The run finished, but items or steps failed on the way (on_
 INTERRUPTED = 130  # Stopped on request: Ctrl+C or SIGTERM
 
 # Failures that mean the flow itself must be fixed, wherever they are raised during a run
-_INVALID_FLOW_EXCEPTIONS = {"ExpressionError", "ExpressionSyntaxError", "ConditionError", "FlowStructureError"}
+_INVALID_FLOW_EXCEPTIONS = {"ExpressionError", "ExpressionSyntaxError", "ConditionError", "FlowStructureError",
+                            "LocalConfigError"}
 
 
 def for_run(context: Any) -> int:

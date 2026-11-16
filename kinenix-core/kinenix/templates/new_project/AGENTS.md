@@ -6,7 +6,7 @@ This folder is a Kinenix flow project. Kinenix runs automation flows written in 
 
 1. Read `requirements.md`. If something needed to build the flow is missing or ambiguous, ask the user before writing it.
 2. Write `flow.md` following the Flow Markdown specification. `flow.md` is the only flow file; do not create a `flow.json`.
-3. Put every value the requirements say must be changeable (URLs, lists, dates, paths, recipients) in `config/config.json` and read it as `${config.name}`.
+3. Put every value the requirements say must be changeable (URLs, lists, dates, paths, recipients) in `config/config.json` and read it as `${config.name}`. Values that differ per machine (a folder, a printer name, a test or production site) go in `config/local.json` on that machine, which replaces the same keys of `config.json` at every run and is not committed (Kinenix 1.3.0).
 4. Put secrets (passwords, API keys, tokens) only in `.env` (see `.env.example`) and read them as `${env.NAME}`. Never write a secret in `flow.md` or `config/config.json`.
 5. List in `"redact"` in `config/config.json` every field that holds personal or confidential data (names, ID numbers, policy or account numbers, addresses), so it is hidden in logs and on the Hub. Add `- **secret:** true` to a `web.type` that types a secret into a field that is not a password field.
 6. Run `kinenix validate .` and fix every reported problem.

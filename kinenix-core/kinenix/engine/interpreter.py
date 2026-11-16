@@ -15,6 +15,7 @@ from .markdown import JSON_FLOW_NOT_RUN, SECTION_HEADINGS, markdown_to_flow
 from .redaction import NOT_SECRET_ENV, Redactor
 from .action_errors import explain as explain_action_error
 from .web_errors import explain as explain_web_error
+from .local_config import LocalConfigError, read_local_config
 from .requires import requirement_problem
 from .stopping import RunStopped, stop_requested
 from .stopping import wait as wait_or_stop
@@ -372,7 +373,24 @@ class FlowInterpreter:
         # A subflow of the same bundle receives the caller's config instead of reading the files again
         flow_dir_str = context.get_variable("__flow_dir__")
         if flow_dir_str and not context.get_variable("__bundle_config_from_caller__"):
-            self._load_bundle_configs(Path(flow_dir_str), context)
+            try:
+                self._load_bundle_configs(Path(flow_dir_str), context)
+            except LocalConfigError as e:
+                # Running with the shared values instead could reach the wrong site or folder
+                context.has_error = True
+                context.failure_details = FailureDetails(
+                    failed_step_id="local_config",
+                    failed_step_name="Machine settings (config/local.json)",
+                    action="flow.config",
+                    exception_class="LocalConfigError",
+                    error_message=str(e),
+                    root_cause=str(e),
+                    suggested_fix="Fix the JSON in config/local.json, or remove the file to use config/config.json only."
+                )
+                self.logger.logger.error(str(e))
+                context.variables.pop("__redactor__", None)
+                self._finish(context)
+                return context
 
         # 4. Caller explicit initial_vars take highest priority. A `config` from the caller (a local
         # subflow's bundle config, inherit_config, or inputs) is merged over the loaded config, key by key
@@ -1019,6 +1037,13 @@ class FlowInterpreter:
                 self.logger.logger.warning(f"Failed to load template config from {template_file}: {str(e)}")
         else:
             self.logger.logger.debug(f"No configuration file ('config.json') found in '{flow_dir.name}'.")
+
+        # Values of this machine, over config.json key by key; only the key names are logged
+        local_data = read_local_config(flow_dir)
+        if local_data is not None:
+            self._apply_config_data(local_data, context)
+            names = ", ".join(sorted(str(k) for k in local_data)) or "no keys"
+            self.logger.logger.info(f"Applied machine settings from config/local.json: {names}")
 
         # 2. Auto-load local .env (if present)
         env_file = flow_dir / ".env"

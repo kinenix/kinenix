@@ -15,6 +15,7 @@ from ..models.flow import FlowDefinition, Step
 from . import expressions
 from .conditions import grouping_problem
 from .evaluator import VariableEvaluator
+from .local_config import LocalConfigError, read_local_config
 from .requires import requirement_problem, version_key
 
 # Keys that belong to the step itself; seeing them in parameters means a converted flow or a typo put them there
@@ -525,6 +526,10 @@ def validate_flow(flow: FlowDefinition, flow_dir: Optional[Path] = None,
             issues.append(f"{where}: {step.action} does not use parameter '{key}'; it would be ignored.{hint}")
 
     if flow_dir is not None:
+        try:
+            read_local_config(flow_dir)
+        except LocalConfigError as e:
+            issues.append(f"{e} A run stops at the start until it is fixed.")
         problems, found = _variable_findings(flow, flow_dir)
         issues.extend(problems)
         if hints is not None:
