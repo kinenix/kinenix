@@ -2,7 +2,14 @@
 
 `kinenix`, `kinenix-hub`, and `kinenix-worker` are released together with one version. How to release: [docs/releasing.md](docs/releasing.md).
 
-## Unreleased
+## 1.2.0 (2026-11-16)
+
+Flows on the Hub: a view that counts flows and shows how each one is doing, and a Hub that calls no model. Nothing promised in 1.0.0 changes ([docs/compatibility.md](docs/compatibility.md)).
+
+### Upgrading from 1.1.0
+
+- Upgrade the Hub first, as usual. The view `v_flows` is created at its next start.
+- `CENTRAL_LLM_URL` can be removed from the Hub's environment; it is ignored.
 
 ### Added
 
@@ -10,7 +17,7 @@
 
 ### Removed
 
-- **The Hub's AI failure analysis** (`CENTRAL_LLM_URL`, `POST /api/v1/executions/{id}/reanalyze`), which was experimental ([docs/compatibility.md](docs/compatibility.md), section 4). The Hub calls no model now. The cause and fix of a failure come from the worker's rules, as before, in `root_cause` and `suggested_fix` of `v_failures`; the dashboard's failure window, `kinenix hub logs`, and agents read them there. The `ai_*` columns of `executions` stay, empty for new runs, so runs recorded before keep their values. `CENTRAL_LLM_URL` can be removed from the Hub's environment; it is ignored.
+- **The Hub's AI failure analysis** (`CENTRAL_LLM_URL`, `POST /api/v1/executions/{id}/reanalyze`). Neither is part of the stability promise: the variable is not a `KINENIX_*` setting, and workers and `kinenix hub` never call the endpoint ([docs/compatibility.md](docs/compatibility.md), section 2). The Hub calls no model now. The cause and fix of a failure come from the worker's rules, as before, in `root_cause` and `suggested_fix` of `v_failures`; the dashboard's failure window, `kinenix hub logs`, and agents read them there. The `ai_*` columns of `executions` stay, empty for new runs, so runs recorded before keep their values.
 - **The ask router** (natural-language questions to the Hub), which was work in progress. Kinenix stays an RPA tool; questions and alerts belong to agents that read the Hub, such as [kytnix](https://github.com/kinenix/kytnix).
 
 ## 1.1.0 (2026-11-13)

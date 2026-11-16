@@ -1,6 +1,6 @@
 # Kinenix Hub Guide
 
-The Kinenix Hub (`kinenix-hub`) receives worker heartbeats and execution telemetry, stores them in a database, and serves the web dashboard with AI-assisted failure summaries. It is planned to also dispatch jobs to workers (see the [roadmap](roadmap.md)). It was called the Orchestrator before; see [Renamed from Orchestrator](#5-renamed-from-orchestrator).
+The Kinenix Hub (`kinenix-hub`) receives worker heartbeats and execution telemetry, stores them in a database, and serves the web dashboard, with the cause and fix of each failure that the worker found. It calls no AI model. Dispatching jobs and delivering flows to workers are planned for 1.5.0 ([roadmap](roadmap.md#17-job-dispatch-and-flow-delivery)). It was called the Orchestrator before; see [Renamed from Orchestrator](#5-renamed-from-orchestrator).
 
 ---
 
