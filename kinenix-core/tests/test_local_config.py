@@ -150,3 +150,17 @@ def test_cli_run_applies_local_json_and_config_on_top(tmp_path):
     assert "Applied machine settings from config/local.json: printer, site" in result.stdout + result.stderr
     log = next((tmp_path / "logs").rglob("*.json"))
     assert "tests/pages/site.html" in log.read_text(encoding="utf-8")
+
+
+def test_validate_reports_an_invalid_local_json_once_with_subflows(tmp_path):
+    """Seen on the Pi: the bundle's subflow repeated the problem. The CLI reports it once, as one sentence."""
+    from kinenix.engine.validation import validate_subflows
+
+    bundle = make_bundle(tmp_path, "{oops", FLOW + SUBFLOW_CALL)
+    (bundle / "subflows").mkdir()
+    (bundle / "subflows" / "read_site.md").write_text(SUBFLOW, encoding="utf-8")
+    flow = load_flow(bundle / "flow.md")
+    issues = validate_flow(flow, bundle) + validate_subflows(flow, bundle)
+    local = [issue for issue in issues if "local.json" in issue]
+    assert len(local) == 1
+    assert "(char 1). A run stops" in local[0]

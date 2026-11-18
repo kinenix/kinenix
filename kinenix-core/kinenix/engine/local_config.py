@@ -31,7 +31,7 @@ def read_local_config(flow_dir: Path) -> Optional[Dict[str, Any]]:
     try:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError) as e:
-        raise LocalConfigError(f"{path} is not valid JSON: {e}") from None
+        raise LocalConfigError(f"{path} is not valid JSON: {e}.") from None
     if not isinstance(data, dict):
         raise LocalConfigError(f"{path} must hold a JSON object of settings, like config/config.json.")
     return data
