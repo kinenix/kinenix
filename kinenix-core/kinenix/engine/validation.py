@@ -454,9 +454,10 @@ def _loop_hints(flow: FlowDefinition) -> List[str]:
 
 
 def validate_flow(flow: FlowDefinition, flow_dir: Optional[Path] = None,
-                  hints: Optional[List[str]] = None) -> List[str]:
+                  hints: Optional[List[str]] = None, check_local_config: bool = True) -> List[str]:
     """
     Return human-readable problems found in the flow; an empty list means none.
+    check_local_config is False for a subflow of the same bundle, whose config/local.json the caller checked.
 
     With flow_dir, the bundle folder whose config the flow reads, it also checks that every ${name} is set
     somewhere. When a list is given, hints receives what is often a mistake but may be intended: a name only
@@ -532,7 +533,8 @@ def validate_flow(flow: FlowDefinition, flow_dir: Optional[Path] = None,
 
     if flow_dir is not None:
         try:
-            read_local_config(flow_dir)
+            if check_local_config:
+                read_local_config(flow_dir)
         except LocalConfigError as e:
             issues.append(f"{e} A run stops at the start until it is fixed.")
         problems, found = _variable_findings(flow, flow_dir)
@@ -616,7 +618,8 @@ def validate_subflows(flow: FlowDefinition, flow_dir: Path, flow_file_dir: Optio
         shared = is_shared_subflow(target, path, _BundleVariables(flow_dir, flow_file_dir))
         child_dir = path.parent if shared else flow_dir
         child_hints: List[str] = []
-        issues.extend(prefix + issue for issue in validate_flow(child, child_dir, child_hints))
+        issues.extend(prefix + issue for issue in validate_flow(child, child_dir, child_hints,
+                                                                check_local_config=child_dir != flow_dir))
         if hints is not None:
             hints.extend(prefix + hint for hint in child_hints)
         issues.extend(validate_subflows(child, child_dir, path.parent, seen, hints))
