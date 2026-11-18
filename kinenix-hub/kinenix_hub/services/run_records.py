@@ -26,7 +26,7 @@ REPORT_MESSAGE_LIMIT = 200
 REPORT_FAILURES_LIMIT = 10
 
 # The keys each details column may hold; docs/hub_data.md documents each one, and a test keeps them in line
-EXECUTION_DETAILS_KEYS = ("v", "run_id", "kinenix_version", "items_total", "items_done", "items_failed",
+EXECUTION_DETAILS_KEYS = ("v", "run_id", "kinenix_version", "flow_version", "items_total", "items_done", "items_failed",
                           "failure_count", "report_md")
 STEP_DETAILS_KEYS = ("v", "line", "path", "subflow", "loop", "retries", "skipped_reason", "error", "output")
 FAILURE_DETAILS_KEYS = ("v", "step_id", "section", "exception", "root_cause", "suggested_fix", "path", "subflow",
@@ -244,6 +244,8 @@ def run_report(payload: Dict[str, Any], run: Dict[str, Any], steps: List[Dict[st
     worker = [f"Worker: {run['worker_id']}"]
     if payload.get("kinenix_version"):
         worker.append(f"Kinenix {payload['kinenix_version']}")
+    if payload.get("flow_version"):
+        worker.append(f"flow version {payload['flow_version']}")
     worker.append(f"duration {format_duration(run['duration_seconds'])}")
     lines.append("- " + ", ".join(worker))
 
@@ -281,6 +283,7 @@ def build_run_records(payload: Dict[str, Any], run: Dict[str, Any]) -> RunRecord
         "v": DETAILS_VERSION,
         "run_id": _text(payload.get("run_id")),
         "kinenix_version": _text(payload.get("kinenix_version")),
+        "flow_version": _text(payload.get("flow_version")),
         "items_total": _int(items.get("total")),
         "items_done": _int(items.get("done")),
         "items_failed": _int(items.get("failed")),

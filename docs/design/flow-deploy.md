@@ -123,6 +123,7 @@ A flow is still code (T1): a trusted publisher can still sign a harmful flow. Si
 - **Job dispatch** (agent-interface.md, section 14) said "only flows that are already on the worker". With deploying, a job still names a flow that is installed on the worker; it never carries the package. The decision stays true, but a flow can now arrive on a worker without anyone at it, so the job allow list (`kinenix-worker jobs allow`) applies to deployed flows like any other, and a new deployment of an allowed flow needs no new allow.
 - **Triggers** (#155, 1.4.0): deploying installs files only. Assigning schedules from the Hub is a later step, once triggers are managed by command.
 - **Flow approval** (agent-interface.md, section 12): publishing a signed package counts as the person's approval of that content; a deployed flow does not need `kinenix approve` again on the worker.
+- **Agents** (agent-interface.md, section 13, decided 2026-11-18): none of the commands in section 10 is an MCP tool. Signing is a person's approval, and trust and install decide what a machine runs, so an agent never does them; it can read the version of a flow and of each run.
 
 ## 12. Order and releases
 

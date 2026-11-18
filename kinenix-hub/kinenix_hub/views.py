@@ -32,6 +32,7 @@ SELECT
     e.end_time AS ended_at,
     e.duration_seconds,
     {_json("e.details", "kinenix_version", "kinenix_version")},
+    {_json("e.details", "flow_version", "flow_version")},
     {_json("e.details", "items_total", "items_total")},
     {_json("e.details", "items_done", "items_done")},
     {_json("e.details", "items_failed", "items_failed")},
@@ -117,7 +118,9 @@ SELECT
     (SELECT l.worker_id FROM executions l WHERE l.flow_name = e.flow_name
      ORDER BY l.start_time DESC, l.created_at DESC LIMIT 1) AS last_worker_id,
     (SELECT l.id FROM executions l WHERE l.flow_name = e.flow_name
-     ORDER BY l.start_time DESC, l.created_at DESC LIMIT 1) AS last_execution_id
+     ORDER BY l.start_time DESC, l.created_at DESC LIMIT 1) AS last_execution_id,
+    (SELECT json_extract(l.details, '$.flow_version') FROM executions l WHERE l.flow_name = e.flow_name
+     ORDER BY l.start_time DESC, l.created_at DESC LIMIT 1) AS last_flow_version
 FROM executions e
 GROUP BY e.flow_name
 """,  # nosec B608: fixed SQL

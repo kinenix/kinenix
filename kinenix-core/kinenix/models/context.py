@@ -67,6 +67,7 @@ class ExecutionContext(BaseModel):
     flow_name: str = Field(..., description="Name of the executed workflow")
     run_id: Optional[str] = Field(default=None, description="Id of the run (${run.id}), shared with its subflows")
     kinenix_version: Optional[str] = Field(default=None, description="Kinenix version that ran the flow")
+    flow_version: Optional[str] = Field(default=None, description="Version of the flow that ran (> Version: in flow.md)")
     items: Optional[Dict[str, int]] = Field(
         default=None, description="Work items: iterations of loops with item_label (total, done, failed)")
     start_time: datetime = Field(default_factory=local_now, description="Workflow start timestamp")

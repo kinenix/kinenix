@@ -40,12 +40,14 @@ Every `flow.md` must start with a Level 1 Heading (`#`) denoting the Flow Name, 
 ```markdown
 # [Flow Name]
 > Description: [Brief summary of business intent]
-> Version: [Semantic version, e.g. 1.0.0]
+> Version: [Version of the flow, e.g. 1.3.0]
 > Requires: [Kinenix version needed, e.g. kinenix>=0.2.0b4]
 
 ## Variables
 - `variable_name`: [initial_value]
 ```
+
+`> Version:` is optional and is the version of the flow itself, not of Kinenix. Write it as `X.Y.Z`, or with a pre-release such as `1.3.0b1` (`aN`, `bN`, `rcN`); `kinenix validate` reports any other form. It is shown by `kinenix validate`, recorded in each run's log as `flow_version`, and sent to the Hub, where `v_runs.flow_version` and `v_flows.last_flow_version` show which version ran ([hub_data.md](hub_data.md)). A flow without it runs as before. Raise it whenever the flow changes after a version was packed: `kinenix validate` compares the flow folder, and the `@shared/` subflows it calls, with `.kinenix-packed.json` and reports a flow that changed but kept its version ([project_bundles.md](project_bundles.md)).
 
 `> Requires:` is optional. A Kinenix older than the version named refuses to run the flow with a message to upgrade. Flows that use `## On Error` or `## Finally` need `> Requires: kinenix>=0.2.0b4` (section 3.2).
 
