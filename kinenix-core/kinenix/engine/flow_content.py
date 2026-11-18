@@ -24,7 +24,10 @@ DEPLOYED_FILE = ".kinenix-deployed.json"
 IGNORE_FILE = ".kinenixignore"
 # Never in a package: secrets and machine settings, run results, tests, and Kinenix's own records
 LEFT_OUT_DIRS = {"output", "logs", "tests", ".git", "__pycache__"}
-LEFT_OUT_FILES = {".env", "config/local.json", PACKED_FILE, DEPLOYED_FILE, IGNORE_FILE}
+MANIFEST_FILE = "kinenix-package.json"
+SIGNATURE_FILE = "kinenix-package.sig"
+PACKAGE_SUFFIX = ".kinx"
+LEFT_OUT_FILES = {".env", "config/local.json", PACKED_FILE, DEPLOYED_FILE, IGNORE_FILE, MANIFEST_FILE, SIGNATURE_FILE}
 SHARED_PREFIX = "@shared/"
 CHANGED_LISTED = 5
 
@@ -57,6 +60,8 @@ def _ignore_patterns(flow_dir: Path) -> List[str]:
 def _left_out(rel: str, patterns: List[str]) -> bool:
     parts = rel.split("/")
     if rel in LEFT_OUT_FILES or any(part in LEFT_OUT_DIRS for part in parts[:-1]):
+        return True
+    if parts[-1].lower().endswith((PACKAGE_SUFFIX, PACKAGE_SUFFIX + ".part")):  # packages built into the folder
         return True
     # A pattern matches the whole path, the file name, or a folder on the way
     for pattern in patterns:

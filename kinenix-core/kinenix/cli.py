@@ -261,6 +261,30 @@ def _main():
     validate_parser = subparsers.add_parser("validate", help="Check a flow for unknown actions and parameters that would be ignored")
     validate_parser.add_argument("flow_file", help="Flow name, bundle directory, or flow.md")
 
+    # Commands: publisher, pack, trust (flow packages, docs/design/flow-deploy.md)
+    publisher_parser = subparsers.add_parser(
+        "publisher", help="Create or show this machine's key for signing flow packages")
+    publisher_parser.add_argument("action", choices=["init", "show"],
+                                  help="'init' creates the key with ssh-keygen and trusts it here; "
+                                       "'show' prints the public key to give to other machines")
+    publisher_parser.add_argument("--name", default=None, help="Publisher name shown to other machines (default: this computer's name)")
+    publisher_parser.add_argument("--force", action="store_true", help="'init': replace an existing key")
+    publisher_parser.add_argument("--no-passphrase", action="store_true", help="'init': do not ask for a passphrase")
+
+    pack_parser = subparsers.add_parser(
+        "pack", help="Validate a flow and build a signed package <name>-<version>.kinx")
+    pack_parser.add_argument("flow_file", help="Flow name, bundle directory, or its flow.md")
+    pack_parser.add_argument("--version", dest="pack_version", default=None,
+                             help="Version for this build instead of > Version: in flow.md")
+    pack_parser.add_argument("-o", "--output", default=None, help="Folder for the package (default: the current folder)")
+
+    trust_parser = subparsers.add_parser(
+        "trust", help="Publishers whose flow packages this machine installs")
+    trust_parser.add_argument("action", choices=["add", "list", "remove"])
+    trust_parser.add_argument("target", nargs="?", default=None,
+                              help="'add': the public key line (or a .pub file); 'remove': the name or key id")
+    trust_parser.add_argument("--name", default=None, help="'add': name for the publisher (default: the key's comment)")
+
     # Command: export-md
     export_parser = subparsers.add_parser(
         "export-md", help="Convert a flow.json from Kinenix 0.2.0b3 or older into flow.md (once)")
@@ -482,6 +506,21 @@ def _main():
         version = f", version {flow_def.version}" if flow_def.version else ""
         print(f"OK: {source} ({flow_def.name}{version})")
         sys.exit(0)
+
+    elif args.command in ("publisher", "pack", "trust"):
+        from .packaging import commands as package_commands
+        if args.command == "publisher":
+            if args.action == "init":
+                sys.exit(package_commands.publisher_init(args.name, args.force, args.no_passphrase))
+            sys.exit(package_commands.publisher_show())
+        if args.command == "pack":
+            sys.exit(package_commands.pack(args.flow_file, args.pack_version, args.output,
+                                           resolve_flow_path, report_validation))
+        if args.action == "add":
+            sys.exit(package_commands.trust_add(args.target, args.name))
+        if args.action == "list":
+            sys.exit(package_commands.trust_list())
+        sys.exit(package_commands.trust_remove(args.target))
 
     elif args.command == "compile":
         src = Path(args.markdown_file).resolve()

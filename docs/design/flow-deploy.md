@@ -60,7 +60,7 @@ hello-1.3.0.kinx
 - `kinenix pack` signs the manifest with the private key; the manifest holds the hash of every file, so the signature covers the whole package.
 - `kinenix trust add <public key> --name office-pc` adds a publisher on a machine; `trust list` and `trust remove` manage them. It is part of `kinenix`, not `kinenix-worker`, so the building machine can install and run its own package before giving it out (decided 2026-11-16); `kinenix publisher init` trusts the new key on that machine.
 - On install, the worker checks, in order: the signature against a trusted publisher, every file hash, `> Requires:` against its own Kinenix version, and that no path leaves the flow folder (threat model T6). Any failure refuses the package with a stable error code (`PACKAGE_UNTRUSTED`, `PACKAGE_DAMAGED`, `PACKAGE_REQUIRES`).
-- **OpenSSH signatures** (decided 2026-11-14): Ed25519 keys made and used with `ssh-keygen` (`-Y sign` on the building machine, `-Y verify` on the worker, with the trusted publishers in an `allowed_signers` file). No Python dependency; it needs OpenSSH 8.0 or later, which Windows 10 and 11, Ubuntu, and Raspberry Pi OS have. Without `ssh-keygen`, `pack` and `install` say what is missing, and `kinenix-worker deploy status` shows it.
+- **OpenSSH signatures** (decided 2026-11-14): Ed25519 keys made and used with `ssh-keygen` (`-Y sign` on the building machine, `-Y verify` on the worker, with the trusted publishers in an `allowed_signers` file). No Python dependency; it needs OpenSSH 8.1 or later (the first with `-Y sign`), which Windows 10 and 11, Ubuntu, and Raspberry Pi OS have. Without `ssh-keygen`, `pack` and `install` say what is missing, and `kinenix-worker deploy status` shows it.
 - **Losing the private key:** make a new key, trust it on the workers, remove the old one. A stolen private key can sign packages until workers remove it, so the key stays on the building machine and is never put on the Hub.
 
 ## 6. Publishing and assigning on the Hub
@@ -158,6 +158,13 @@ All of it is additions: new commands, endpoints, tables, and heartbeat fields; n
 - **Installing on the building machine:** `kinenix install` must work on a machine with only `kinenix` installed, so the person who built a package can install and run it there first. Trusting a publisher therefore cannot need `kinenix-worker`: the command is `kinenix trust` (section 5).
 
 - **`deploy enable`:** only for packages the Hub delivers, built in 1.5.0 with delivery; not needed for `kinenix install` by hand (section 7).
+
+2026-11-18, while building part 1:
+
+- **`kinenix trust` comes with `publisher` and `pack`**, not with `install`: `publisher init` writes the trust file, and both use the same `ssh-keygen` code.
+- **`@shared/` subflows in a package** sit under `@shared/` in the flow folder, the first place a `flow.call` to `@shared/...` looks, so `flow.md` is not rewritten.
+- **OpenSSH 8.1**, the first version with `ssh-keygen -Y sign`. A signature is checked against the key named by the manifest's key id, so `-Y find-principals` (newer) is not needed.
+- **Agents** do not pack, sign, trust, or install (section 11).
 
 Open: none.
 
