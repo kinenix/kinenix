@@ -331,6 +331,19 @@
       "description": "Kinenix version that ran the flow",
       "title": "Kinenix Version"
     },
+    "flow_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Version of the flow that ran (> Version: in flow.md)",
+      "title": "Flow Version"
+    },
     "items": {
       "anyOf": [
         {

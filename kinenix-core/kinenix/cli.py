@@ -18,7 +18,13 @@ from .engine.markdown import (
     markdown_issues,
 )
 from .engine.stopping import install_signal_handlers
-from .engine.validation import deprecated_uses, leftover_json_flows, validate_flow, validate_subflows
+from .engine.validation import (
+    deprecated_uses,
+    leftover_json_flows,
+    packed_issues,
+    validate_flow,
+    validate_subflows,
+)
 from .scaffold import (
     DEFAULT_EXAMPLE,
     EXAMPLES_DIR,
@@ -54,15 +60,18 @@ def override_config(name: str, flow_dir: Path) -> Dict[str, Any]:
     return data
 
 
-def report_validation(flow: FlowDefinition, md_path: Optional[Path] = None) -> List[str]:
+def report_validation(flow: FlowDefinition, md_path: Optional[Path] = None, check_packed: bool = False) -> List[str]:
     """Print validation problems as warnings and return them; with md_path, also lines flow.md ignores,
-    problems in the subflows of that bundle, and hints (printed, not returned: they are not problems)."""
+    problems in the subflows of that bundle, and hints (printed, not returned: they are not problems).
+    check_packed (kinenix validate) also reports a flow that changed since its version was packed."""
     issues, hints = [], []
     if md_path is not None and md_path.suffix.lower() == ".md" and md_path.is_file():
         issues.extend(markdown_issues(md_path.read_text(encoding="utf-8-sig")))
     issues.extend(validate_flow(flow, md_path.parent if md_path is not None else None, hints))
     if md_path is not None:
         issues.extend(validate_subflows(flow, md_path.parent, hints=hints))
+        if check_packed:
+            issues.extend(packed_issues(flow, md_path.parent))
         issues.extend(leftover_json_flows(md_path))
     for issue in issues:
         print(f"Warning: {issue}", file=sys.stderr)
@@ -464,13 +473,14 @@ def _main():
         except Exception as e:
             print(f"Error loading flow at '{source}': {e}", file=sys.stderr)
             sys.exit(exit_codes.INVALID_FLOW)
-        issues = report_validation(flow_def, md_path=source)
+        issues = report_validation(flow_def, md_path=source, check_packed=True)
         for notice in deprecated_uses(flow_def):  # still runs in 1.x, so not counted as a problem
             print(f"Deprecated: {notice}", file=sys.stderr)
         if issues:
             print(f"{len(issues)} problem(s) in {source}", file=sys.stderr)
             sys.exit(exit_codes.INVALID_FLOW)
-        print(f"OK: {source} ({flow_def.name})")
+        version = f", version {flow_def.version}" if flow_def.version else ""
+        print(f"OK: {source} ({flow_def.name}{version})")
         sys.exit(0)
 
     elif args.command == "compile":

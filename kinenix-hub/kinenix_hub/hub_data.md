@@ -39,6 +39,7 @@ One row per run. Answers: how many runs, which failed, success rate and duration
 | `ended_at` | End, UTC | `2026-10-11 19:14:00.000000` |
 | `duration_seconds` | Duration | `840.0` |
 | `kinenix_version` | Kinenix version on the worker | `0.2.0b4` |
+| `flow_version` | Version of the flow that ran (`> Version:` in its `flow.md`); empty for a flow without one and for workers before 1.3.0 | `1.3.0` |
 | `items_total` | Work items (iterations of loops with `item_label`) | `12` |
 | `items_done` | Work items done | `6` |
 | `items_failed` | Work items that failed; the rest were not reached | `1` |
@@ -128,6 +129,7 @@ One row per flow the Hub has a run of. Answers: which flows run and how many the
 | `last_status` | Status of its newest run | `partial` |
 | `last_worker_id` | Worker of its newest run | `rpi4` |
 | `last_execution_id` | Id on the Hub of its newest run (`v_runs.execution_id`) | `53a58daa-...` |
+| `last_flow_version` | Flow version of its newest run, when the flow has `> Version:` | `1.3.0` |
 
 ## Tables
 
@@ -168,6 +170,7 @@ One row per run, written when the worker sends the run.
 | `v` | Version of this JSON | `1` |
 | `run_id` | Run id on the worker | `20261012T020000-abcd` |
 | `kinenix_version` | Kinenix version on the worker | `0.2.0b4` |
+| `flow_version` | Version of the flow that ran (`> Version:`), when it has one | `1.3.0` |
 | `items_total` | Work items | `12` |
 | `items_done` | Work items done | `6` |
 | `items_failed` | Work items failed | `1` |
@@ -275,7 +278,7 @@ Each run gets a short Markdown report in `executions.details.report_md` (`v_runs
 
 ```markdown
 # TIPH Quotes, 2026-10-12 02:00 +07:00 (failed)
-- Worker: rpi4, Kinenix 0.2.0b4, duration 14 min
+- Worker: rpi4, Kinenix 0.2.0b4, flow version 1.3.0, duration 14 min
 - Items: 6 of 12 done, 1 failed, 5 not reached
 - Failed: R007 HONDA HR-V at "Choose Brand" (subflow process_one, line 42, after 2 retries), continued: Timeout 30000ms exceeded
 - Failed: "Save Quotes" (line 60), run stopped: File is open in Excel

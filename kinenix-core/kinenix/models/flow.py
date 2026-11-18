@@ -44,7 +44,8 @@ class ActionConfig(BaseModel):
 class FlowDefinition(BaseModel):
     name: str = Field(..., description="Name of the RPA automation flow")
     description: Optional[str] = Field(default=None, description="High-level description of business purpose and scope")
-    version: str = Field(default="1.0.0", description="Semantic version of the flow definition")
+    version: Optional[str] = Field(
+        default=None, description="Version of the flow (> Version:), X.Y.Z with an optional aN, bN, or rcN")
     variables: Dict[str, Any] = Field(default_factory=dict, description="Initial context variables accessible via ${var_name}")
     requires: Optional[str] = Field(default=None, description="Kinenix version the flow needs, e.g. kinenix>=0.2.0b4")
     steps: List[Step] = Field(default_factory=list, description="Sequential steps to execute")

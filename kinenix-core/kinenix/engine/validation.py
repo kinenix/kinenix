@@ -15,6 +15,8 @@ from ..models.flow import FlowDefinition, Step
 from . import expressions
 from .conditions import grouping_problem
 from .evaluator import VariableEvaluator
+from .flow_content import PackedRecordError, changed_since_packed
+from .flow_content import version_problem as flow_version_problem
 from .local_config import LocalConfigError, read_local_config
 from .requires import requirement_problem, version_key
 
@@ -467,6 +469,9 @@ def validate_flow(flow: FlowDefinition, flow_dir: Optional[Path] = None,
     problem = requirement_problem(flow.requires)
     if problem:
         issues.append(problem)
+    problem = flow_version_problem(flow.version)
+    if problem:
+        issues.append(problem)
     newer = _version_problem(flow)
     if newer:
         issues.append(newer)
@@ -537,6 +542,16 @@ def validate_flow(flow: FlowDefinition, flow_dir: Optional[Path] = None,
     if hints is not None:
         hints.extend(_loop_hints(flow))
     return issues
+
+
+def packed_issues(flow: FlowDefinition, flow_dir: Path) -> List[str]:
+    """The flow changed since its `> Version:` was packed (.kinenix-packed.json, #234). Checked for the bundle
+    as a whole, with the @shared/ subflows it calls, so it is not repeated for each subflow."""
+    try:
+        problem = changed_since_packed(flow, flow_dir)
+    except PackedRecordError as e:
+        return [f"{e} kinenix pack writes it; restore it from git, or delete it to start the record again."]
+    return [problem] if problem else []
 
 
 class _BundleVariables:

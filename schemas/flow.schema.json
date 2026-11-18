@@ -213,10 +213,17 @@
       "title": "Description"
     },
     "version": {
-      "default": "1.0.0",
-      "description": "Semantic version of the flow definition",
-      "title": "Version",
-      "type": "string"
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Version of the flow (> Version:), X.Y.Z with an optional aN, bN, or rcN",
+      "title": "Version"
     },
     "variables": {
       "additionalProperties": true,

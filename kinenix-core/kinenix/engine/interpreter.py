@@ -419,6 +419,7 @@ class FlowInterpreter:
         context.set_variable("run", run_info)
         context.run_id = run_info["id"]
         context.kinenix_version = __version__
+        context.flow_version = flow_def.version
         # Where a step is: flow > loop or if > subflow > ..., for ${error.path}
         if not isinstance(context.get_variable("__location__"), list):
             context.set_variable("__location__", [flow_def.name])

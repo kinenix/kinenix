@@ -313,3 +313,23 @@ def test_flows_view_has_one_row_per_flow_with_its_newest_run():
     assert flow["first_run_at"].startswith("2026-10-31 19:00:00")
     assert flow["last_run_at"].startswith("2026-11-02 19:00:00")
     assert (flow["last_status"], flow["last_worker_id"], flow["last_execution_id"]) == ("interrupted", "pi-a", newest)
+
+
+def test_flow_version_reaches_runs_flows_and_the_report():
+    """> Version: of the flow (#234): v_runs.flow_version, v_flows.last_flow_version, and the report."""
+    def run(start, **extra):
+        payload = {"flow_name": "Versioned Demo", "start_time": start, "has_error": False,
+                   "kinenix_version": "1.3.0", "metrics": {"total_duration_seconds": 1.0}, **extra}
+        return _ingest(payload)
+
+    old = run("2026-11-17 02:00:00+07:00", flow_version="1.2.0")
+    new = run("2026-11-18 02:00:00+07:00", flow_version="1.3.0")
+    rows = {r["execution_id"]: r for r in _rows("SELECT * FROM v_runs WHERE flow_name = 'Versioned Demo'", None)}
+    assert (rows[old]["flow_version"], rows[new]["flow_version"]) == ("1.2.0", "1.3.0")
+    assert "- Worker: rpi4, Kinenix 1.3.0, flow version 1.3.0, duration 1.0 s\n" in rows[new]["report_md"]
+    flow = _rows("SELECT last_flow_version FROM v_flows WHERE flow_name = 'Versioned Demo'", None)[0]
+    assert flow["last_flow_version"] == "1.3.0"
+    # A flow without > Version: (or a worker before 1.3.0) leaves it empty
+    plain = run("2026-11-19 02:00:00+07:00")
+    row = _rows("SELECT flow_version, report_md FROM v_runs WHERE execution_id = :id", plain)[0]
+    assert row["flow_version"] is None and "flow version" not in row["report_md"]

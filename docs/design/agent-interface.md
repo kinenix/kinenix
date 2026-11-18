@@ -79,11 +79,11 @@ The same objects appear in every command and in the MCP server; their fields fol
 
 | Object | Main fields |
 | :--- | :--- |
-| **Run** | `run_id`, `flow`, `worker`, `status` (`success`, `partial`, `failed`, `interrupted`, `running`, `queued`), `started`, `duration_seconds`, `items {total, done, failed}`, `failures` (list of Failure), `report_md`, `log_path`, `kinenix_version`, `on_hub` (false while the run waits in the outbox) |
+| **Run** | `run_id`, `flow`, `worker`, `status` (`success`, `partial`, `failed`, `interrupted`, `running`, `queued`), `started`, `duration_seconds`, `items {total, done, failed}`, `failures` (list of Failure), `report_md`, `log_path`, `kinenix_version`, `flow_version`, `on_hub` (false while the run waits in the outbox) |
 | **Step** | `seq`, `section`, `step`, `action`, `status`, `started`, `duration_seconds`, `path`, `subflow`, `line`, `item`, `retries`, `error`, `output` (for `logic.loop`: `total_items_processed`, `stopped_early`) |
 | **Failure** | `step`, `action`, `type` (`Business`, `Technical`), `handled` (`stopped`, `continued`, `fallback`, `next_item`, `ignored`), `message`, `root_cause`, `suggested_fix`, `path`, `subflow`, `line`, `item`, `retries`, `screenshot` |
 | **Issue** (from validate) | `code`, `severity` (`error`, `warning`), `message`, `file`, `line`, `step`, `hint` |
-| **Flow** | `name`, `path`, `description`, `requires`, `inputs` (from `## Variables`), `side_effects`, `last_run`, `approved` (section 12) |
+| **Flow** | `name`, `path`, `description`, `version`, `requires`, `inputs` (from `## Variables`), `side_effects`, `last_run`, `approved` (section 12) |
 | **Job** (section 14) | `job_id`, `flow`, `worker`, `vars`, `status` (`waiting for confirmation`, `confirmed`, `started`, `refused`, `expired`), `requested_by`, `confirmed_by`, `run_id` |
 
 ## 7. Tools
@@ -186,6 +186,7 @@ An agent may write and change flows; a person decides what runs. The steps the a
 
 - Its tools are the ones in section 7, few and with short answers: read-only ones free, `run` and `hub_run` with the confirmation of section 9.
 - It returns the same `data` objects as `--json`.
+- **No packaging or deploying tools** (decided 2026-11-18): `kinenix publisher`, `pack`, `trust`, `install`, `kinenix-worker deploy`, and `kinenix hub deploy` ([flow-deploy.md](flow-deploy.md), section 10) are not MCP tools. Signing a package counts as a person's approval of its content (flow-deploy.md, section 11), and trusting a key decides which code a machine runs; text an agent reads (a requirements file, a web page) must not be able to lead it to either. An agent sees versions read-only: `version` in the Flow object, `flow_version` in the Run object.
 - An MCP server over HTTP inside the Hub, for agents on machines without Kinenix, waits until someone needs it.
 
 ## 14. Job dispatch

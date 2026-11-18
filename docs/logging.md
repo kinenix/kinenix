@@ -41,6 +41,7 @@ Each execution log contains comprehensive runtime and business data:
   "flow_name": "RPA Challenge Solver",
   "run_id": "20260911T213934-qhzk",
   "kinenix_version": "0.2.0b4",
+  "flow_version": "1.3.0",
   "items": null,
   "start_time": "2026-09-11 21:39:34.000000+07:00",
   "is_completed": false,

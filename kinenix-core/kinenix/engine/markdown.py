@@ -323,7 +323,7 @@ def markdown_to_flow(md_content: str, issues: Optional[List[str]] = None) -> Flo
     
     flow_name = "Untitled Flow"
     description: Optional[str] = None
-    version = "1.0.0"
+    version: Optional[str] = None
     requires: Optional[str] = None
     variables: Dict[str, Any] = {}
 
@@ -359,7 +359,7 @@ def markdown_to_flow(md_content: str, issues: Optional[List[str]] = None) -> Flo
             if quote_text.lower().startswith("description:"):
                 description = quote_text[len("description:"):].strip()
             elif quote_text.lower().startswith("version:"):
-                version = quote_text[len("version:"):].strip()
+                version = quote_text[len("version:"):].strip() or None
             elif quote_text.lower().startswith("requires:"):
                 requires = quote_text[len("requires:"):].strip()
             continue
@@ -568,7 +568,8 @@ def flow_to_markdown(flow: FlowDefinition) -> str:
     doc.append(f"# {flow.name}")
     if flow.description:
         doc.append(f"> Description: {flow.description}")
-    doc.append(f"> Version: {flow.version}")
+    if flow.version:
+        doc.append(f"> Version: {flow.version}")
     if flow.requires:
         doc.append(f"> Requires: {flow.requires}")
     doc.append("")
