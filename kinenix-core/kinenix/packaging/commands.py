@@ -116,7 +116,7 @@ def pack(flow_input: str, version: Optional[str], output: Optional[str],
     print(f"Packed {len(files)} files:")
     for rel in files:
         print(f"  {rel}")
-    for rel in result.secret_like:
+    for rel in result.flagged_names:
         print(f"Warning: {rel} looks like it may hold a secret, and it is in the package. Move secrets to "
               f".env, or list the file in .kinenixignore.", file=sys.stderr)
     if result.size > SIZE_WARNING:

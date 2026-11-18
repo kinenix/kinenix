@@ -39,7 +39,7 @@ from .signing import SigningError, read_public_key, sign, verify
 FORMAT = 1
 SIZE_WARNING = 50 * 1024 * 1024  # the Hub's default upload limit (flow-deploy.md, section 6)
 # File names that often hold secrets; pack warns and still packs them (a template may be meant to go)
-SECRET_LIKE = ("*.pem", "*.key", "*.pfx", "*.p12", "*.kdbx", "id_rsa*", "id_ed25519*", "id_ecdsa*", "*secret*",
+FLAGGED_PATTERNS = ("*.pem", "*.key", "*.pfx", "*.p12", "*.kdbx", "id_rsa*", "id_ed25519*", "id_ecdsa*", "*secret*",
                "*password*", "*passwd*", "*token*", "credentials*", ".env.*", ".netrc")
 
 
@@ -52,7 +52,7 @@ class PackResult:
     path: Path
     manifest: Dict[str, Any]
     size: int
-    secret_like: List[str] = field(default_factory=list)
+    flagged_names: List[str] = field(default_factory=list)
 
 
 def package_name(flow_dir: Path) -> str:
@@ -64,13 +64,13 @@ def package_file_name(name: str, version: str) -> str:
     return f"{name}-{version}{PACKAGE_SUFFIX}"
 
 
-def secret_like(names: List[str]) -> List[str]:
+def flagged_names(names: List[str]) -> List[str]:
     found = []
     for name in names:
         base = name.rsplit("/", 1)[-1].lower()
         if base.endswith(".example"):
             continue
-        if any(fnmatch.fnmatch(base, pattern) for pattern in SECRET_LIKE):
+        if any(fnmatch.fnmatch(base, pattern) for pattern in FLAGGED_PATTERNS):
             found.append(name)
     return found
 
@@ -127,4 +127,4 @@ def build(flow: FlowDefinition, flow_dir: Path, version: str, output_dir: Path) 
 
     record_packed(flow_dir, version, content_files(flow.model_copy(update={"version": version}), flow_dir))
     return PackResult(path=target, manifest=manifest, size=target.stat().st_size,
-                      secret_like=secret_like(list(files)))
+                      flagged_names=flagged_names(list(files)))

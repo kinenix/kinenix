@@ -17,7 +17,7 @@ from kinenix.engine.interpreter import FlowInterpreter
 from kinenix.engine.logger import ExecutionLogger
 from kinenix.engine.markdown import load_flow
 from kinenix.packaging import commands, signing, trust
-from kinenix.packaging.pack import package_name, secret_like
+from kinenix.packaging.pack import flagged_names, package_name
 
 needs_ssh_keygen = pytest.mark.skipif(shutil.which("ssh-keygen") is None, reason="needs OpenSSH ssh-keygen")
 
@@ -133,7 +133,7 @@ def test_missing_or_old_ssh_keygen_says_what_to_install(monkeypatch):
 
 def test_secret_like_names():
     names = ["flow.md", "assets/server.pem", "config/api_token.txt", ".env.example", "assets/logo.png", "id_rsa"]
-    assert secret_like(names) == ["assets/server.pem", "config/api_token.txt", "id_rsa"]
+    assert flagged_names(names) == ["assets/server.pem", "config/api_token.txt", "id_rsa"]
 
 
 def test_package_name_is_the_folder_name(tmp_path):
