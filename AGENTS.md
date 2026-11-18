@@ -50,6 +50,7 @@ kinenix init demo --example hello                 # copy of a flows/examples bun
 kinenix actions [web]                             # actions and the parameters each accepts
 kinenix run flows/examples/quote_requests
 kinenix validate flows/examples/quote_requests   # unknown actions and ignored parameters
+kinenix publisher init; kinenix pack NAME       # signed <name>-<version>.kinx (needs OpenSSH 8.1+); kinenix trust add/list/remove
 kinenix connect http://<hub-ip>:8080   # send this machine's runs to a Hub (asks for and checks the key)
 kinenix-worker service install    # systemd service for the worker (Linux; --dry-run prints the unit)
 kinenix hub            # first run asks setup questions and saves them

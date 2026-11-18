@@ -188,6 +188,26 @@ Hint: Step 'step_1' (Build Subject), line 9: ${report_date} is not set anywhere 
 Hint: Step 'step_3' (Quote Each Vehicle), line 21: 2 sub-steps that may fail stop the whole loop when they fail ('Open Page' line 30, 'Choose Model' line 33), while 'Check Row' line 23 uses on_error: next_item. Add on_error: next_item to the steps that may fail for one item, or write on_error: fail on those where one failure should stop the run.
 ```
 
+### 2.10 Build a Signed Package (`publisher`, `pack`, `trust`)
+Kinenix 1.3.0. A package (`.kinx`) carries one flow folder to other machines as one file, signed by the machine that built it ([design/flow-deploy.md](design/flow-deploy.md)). Signing uses OpenSSH 8.1 or later (`ssh-keygen`), which Windows 10 and 11, Ubuntu, and Raspberry Pi OS have; without it, the commands say how to install it.
+
+```bash
+kinenix publisher init                 # once per building machine: makes the key, trusts it here
+kinenix publisher show                 # the public key to give to other machines
+kinenix pack get_stock_data            # validates, then builds ./get_stock_data-1.3.0.kinx
+kinenix pack get_stock_data --version 1.3.1 -o dist
+kinenix trust add "ssh-ed25519 AAAA... office-pc" --name office-pc   # on a machine that installs packages
+kinenix trust list
+kinenix trust remove office-pc
+```
+
+- **`publisher init`** makes an Ed25519 key in `~/.kinenix/publisher/` (private key mode `600` on Linux) named after the computer (`--name` to choose), and trusts it on this machine. `ssh-keygen` asks for an optional passphrase; with one, `pack` asks for it each time (`--no-passphrase` skips the question). It keeps an existing key; `--force` makes a new one, after which every machine must trust the new key. Keep the private key on the building machine only.
+- **`pack`** needs a version, from `> Version:` in `flow.md` or `--version`, and runs `kinenix validate` first: a flow with problems, or one that changed since its version was packed, is not packed. It lists the files it packed, warns about file names that often hold secrets (`*.pem`, `*.key`, `*token*`, `*password*`, ...) and about packages over 50 MB, and records the version in `.kinenix-packed.json`. The package name is the flow's folder name.
+- **What is packed:** the flow folder without `.env`, `config/local.json`, `output/`, `logs/`, `tests/`, `.git/`, and the patterns in `.kinenixignore` (one per line), plus the `@shared/` subflows it calls, under `@shared/`. The manifest `kinenix-package.json` holds the name, title, version, `> Requires:`, the Kinenix version that built it, the build time, the publisher's name and key id, and the SHA-256 of every file; `kinenix-package.sig` is its signature.
+- **`trust`** keeps the publishers this machine accepts in `~/.kinenix/allowed_signers`. Only a person at the machine changes it; the Hub never sends keys. `trust list` marks this machine's own key.
+
+Exit codes: 0 done; 1 no key, or `ssh-keygen` missing or failing; 2 no or bad version, a single-file flow, a bad key or name; 4 validation problems; 7 flow or publisher not found.
+
 ---
 
 ## 3. Command Options & Parameters

@@ -98,7 +98,7 @@ This ties the component to the caller's key names, so prefer `inputs` for compon
 
 The project bundle structure directly enables a robust deployment pipeline to unattended robot workers (`kinenix-worker`):
 
-> **Status:** Stage 1 and the sandbox workspace in Stage 4 (`kinenix-worker run --sandbox`) are implemented. Packaging, Hub distribution, the worker cache, and WebSocket streaming (Stages 2, 3, 5) are planned. See [roadmap.md](roadmap.md). The proposal that replaces Stages 2 and 3 (signed packages that workers pull from the Hub, no WebSocket) is [design/flow-deploy.md](design/flow-deploy.md).
+> **Status:** Stage 1, signed packages in Stage 2 (`kinenix pack`, Kinenix 1.3.0), and the sandbox workspace in Stage 4 (`kinenix-worker run --sandbox`) are implemented. Installing a package (`kinenix install`) comes later in 1.3.0, and delivery through the Hub in 1.5.0; there is no WebSocket. See [roadmap.md](roadmap.md) and [design/flow-deploy.md](design/flow-deploy.md).
 
 ```text
 [ Developer Machine ] -> [ Kinenix Hub ] -> [ Unattended Worker Daemon ]
@@ -111,14 +111,13 @@ The project bundle structure directly enables a robust deployment pipeline to un
 - All assets remain inside `./assets/` and logs are written to central `logs/`.
 
 ### Stage 2: Packaging & Versioning
-- The project bundle directory is packaged into a versioned archive (e.g. `invoice_tax_filing-1.0.0.kinx` or `.zip`).
-- Any referenced `@shared/` flows are inlined by the packaging tool into the bundle, ensuring the archive is 100% self-contained.
-- The package is published to **Kinenix Hub**.
+- `kinenix publisher init` makes the building machine's signing key once; `kinenix pack NAME` validates the flow and builds `<name>-<version>.kinx`, signed with that key ([cli_guide.md](cli_guide.md#210-build-a-signed-package-publisher-pack-trust)).
+- The version is `> Version:` in `flow.md`. A version is packed once: `.kinenix-packed.json` (kept in git) records its content, and `pack` refuses a flow that changed but kept its version.
+- The `@shared/` subflows the flow calls are copied into the package under `@shared/`, so it runs on a machine without the same `@shared` folder. `.env`, `config/local.json`, `output/`, `logs/`, and `tests/` are never packed.
 
-### Stage 3: Distribution & Local Worker Cache
-- Background daemons (`kinenix-worker`) running on target worker machines (Windows VMs, PCs, or Raspberry Pi) connect to Hub via WebSocket.
-- When a job is dispatched, the worker checks its local package cache (`~/.kinenix/packages/` or `C:\ProgramData\Kinenix\packages\`).
-- If the requested version is not present or updated, the worker downloads and verifies the package archive.
+### Stage 3: Installing on Other Machines
+- Each machine that installs packages trusts the building machine's public key once: `kinenix trust add "<key>" --name office-pc`.
+- `kinenix install FILE` (later in 1.3.0) checks the signature and every file, then installs into the flows folder, keeping that machine's `.env`, `config/local.json`, `output/`, and `logs/`. Delivery from the Hub to workers that pull it comes in 1.5.0 ([design/flow-deploy.md](design/flow-deploy.md)).
 
 ### Stage 4: Sandbox Workspace Isolation
 - Prior to execution, the worker unpacks the project bundle into an isolated, per-job workspace directory:
