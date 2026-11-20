@@ -278,6 +278,21 @@ def _main():
                              help="Version for this build instead of > Version: in flow.md")
     pack_parser.add_argument("-o", "--output", default=None, help="Folder for the package (default: the current folder)")
 
+    install_parser = subparsers.add_parser(
+        "install", help="Check a signed package (.kinx) and install it into the flows folder")
+    install_parser.add_argument("package_file", help="The .kinx file, e.g. hello-1.3.0.kinx")
+    install_parser.add_argument("--replace", action="store_true",
+                                help="Replace a folder that was not installed from a package without asking (it is kept as a copy)")
+    install_parser.add_argument("--wait", type=float, default=30, metavar="MINUTES",
+                                help="How long to wait for a run of the flow to end (default: 30; 0: do not wait)")
+
+    rollback_parser = subparsers.add_parser(
+        "rollback", help="Install the previous version of a flow from the packages kept on this machine")
+    rollback_parser.add_argument("flow_name", help="Flow folder name, e.g. hello")
+    rollback_parser.add_argument("--to", dest="to_version", default=None, help="The version to go back to (default: the one before)")
+    rollback_parser.add_argument("--wait", type=float, default=30, metavar="MINUTES",
+                                 help="How long to wait for a run of the flow to end (default: 30)")
+
     trust_parser = subparsers.add_parser(
         "trust", help="Publishers whose flow packages this machine installs")
     trust_parser.add_argument("action", choices=["add", "list", "remove"])
@@ -507,8 +522,12 @@ def _main():
         print(f"OK: {source} ({flow_def.name}{version})")
         sys.exit(0)
 
-    elif args.command in ("publisher", "pack", "trust"):
+    elif args.command in ("publisher", "pack", "trust", "install", "rollback"):
         from .packaging import commands as package_commands
+        if args.command == "install":
+            sys.exit(package_commands.install(args.package_file, args.replace, args.wait))
+        if args.command == "rollback":
+            sys.exit(package_commands.rollback(args.flow_name, args.to_version, args.wait))
         if args.command == "publisher":
             if args.action == "init":
                 sys.exit(package_commands.publisher_init(args.name, args.force, args.no_passphrase))

@@ -51,6 +51,7 @@ kinenix actions [web]                             # actions and the parameters e
 kinenix run flows/examples/quote_requests
 kinenix validate flows/examples/quote_requests   # unknown actions and ignored parameters
 kinenix publisher init; kinenix pack NAME       # signed <name>-<version>.kinx (needs OpenSSH 8.1+); kinenix trust add/list/remove
+kinenix install NAME-1.3.0.kinx; kinenix rollback NAME   # check and install a package into the flows folder; go back a version
 kinenix connect http://<hub-ip>:8080   # send this machine's runs to a Hub (asks for and checks the key)
 kinenix-worker service install    # systemd service for the worker (Linux; --dry-run prints the unit)
 kinenix hub            # first run asks setup questions and saves them
@@ -132,6 +133,7 @@ When you change code so that it matches a target, update this table and `docs/ro
 | `KINENIX_WORKER_ID` | kinenix-core, kinenix-worker | Worker identifier in telemetry and heartbeats; kinenix-worker defaults to the host name |
 | `KINENIX_HEARTBEAT_INTERVAL` | kinenix-worker | Seconds between heartbeats while a worker command runs (default 30) |
 | `KINENIX_NO_UPDATE_CHECK` | kinenix-core | Set to `1` to stop the CLI from asking PyPI once a day for a newer release (`kinenix/update_check.py`, `docs/cli_guide.md` section 2.1) |
+| `KINENIX_PACKAGES_KEEP` | kinenix-core | Packages kept per flow in `~/.kinenix/packages/<flow>/` for `kinenix rollback` (default 10) |
 | `KINENIX_WORKER_LOG_LEVEL` | kinenix-worker | Level of the worker's own messages (triggers started and fired) in `watch`, `schedule`, and `daemon` (default INFO) |
 | `KINENIX_HUB_DASHBOARD_USER` / `KINENIX_HUB_DASHBOARD_PASSWORD` | kinenix-hub | Basic Auth for the dashboard and read endpoints; unset password means localhost-only |
 | `KINENIX_HUB_HOST` / `KINENIX_HUB_PORT` | kinenix-hub | Bind address (default `127.0.0.1`, localhost only) and port |

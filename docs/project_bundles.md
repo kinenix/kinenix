@@ -98,7 +98,7 @@ This ties the component to the caller's key names, so prefer `inputs` for compon
 
 The project bundle structure directly enables a robust deployment pipeline to unattended robot workers (`kinenix-worker`):
 
-> **Status:** Stage 1, signed packages in Stage 2 (`kinenix pack`, Kinenix 1.3.0), and the sandbox workspace in Stage 4 (`kinenix-worker run --sandbox`) are implemented. Installing a package (`kinenix install`) comes later in 1.3.0, and delivery through the Hub in 1.5.0; there is no WebSocket. See [roadmap.md](roadmap.md) and [design/flow-deploy.md](design/flow-deploy.md).
+> **Status:** Stage 1, signed packages and installing them in Stages 2 and 3 (`kinenix pack`, `kinenix install`, Kinenix 1.3.0), and the sandbox workspace in Stage 4 (`kinenix-worker run --sandbox`) are implemented. Delivery through the Hub comes in 1.5.0; there is no WebSocket. See [roadmap.md](roadmap.md) and [design/flow-deploy.md](design/flow-deploy.md).
 
 ```text
 [ Developer Machine ] -> [ Kinenix Hub ] -> [ Unattended Worker Daemon ]
@@ -117,7 +117,7 @@ The project bundle structure directly enables a robust deployment pipeline to un
 
 ### Stage 3: Installing on Other Machines
 - Each machine that installs packages trusts the building machine's public key once: `kinenix trust add "<key>" --name office-pc`.
-- `kinenix install FILE` (later in 1.3.0) checks the signature and every file, then installs into the flows folder, keeping that machine's `.env`, `config/local.json`, `output/`, and `logs/`. Delivery from the Hub to workers that pull it comes in 1.5.0 ([design/flow-deploy.md](design/flow-deploy.md)).
+- `kinenix install FILE` checks the signature and every file, then installs into the flows folder as `<flows>/<name>`, keeping that machine's `.env`, `config/local.json`, `output/`, and `logs/`. A new version replaces the old one in the same folder, so `kinenix run NAME` and triggers keep working; `kinenix rollback NAME` goes back. Delivery from the Hub to workers that pull it comes in 1.5.0 ([design/flow-deploy.md](design/flow-deploy.md)).
 
 ### Stage 4: Sandbox Workspace Isolation
 - Prior to execution, the worker unpacks the project bundle into an isolated, per-job workspace directory:

@@ -208,6 +208,32 @@ kinenix trust remove office-pc
 
 Exit codes: 0 done; 1 no key, or `ssh-keygen` missing or failing; 2 no or bad version, a single-file flow, a bad key or name; 4 validation problems; 7 flow or publisher not found.
 
+### 2.11 Install a Package (`install`, `rollback`)
+Kinenix 1.3.0. Copy the `.kinx` file to the machine and install it there; it needs only `kinenix` and OpenSSH, no Hub and no `kinenix-worker`.
+
+```bash
+kinenix install get_stock_data-1.3.0.kinx     # into <flows folder>/get_stock_data
+kinenix install get_stock_data-1.3.1.kinx     # the new version replaces 1.3.0 in the same folder
+kinenix rollback get_stock_data               # back to 1.3.0
+kinenix rollback get_stock_data --to 1.2.0
+```
+
+For several machines, trust the building machine's key once on each, then copy and install every new version:
+
+```bash
+for w in worker01 worker02; do
+  scp get_stock_data-1.3.1.kinx $w: && ssh $w 'kinenix install get_stock_data-1.3.1.kinx'
+done
+```
+
+- **Checks, before anything changes:** the signature, by a publisher in `kinenix trust list` (`PACKAGE_UNTRUSTED` names the publisher to trust); that the package holds exactly the files its signed manifest lists, each with the signed content, and no path that leaves the flow folder (`PACKAGE_DAMAGED`); and `> Requires:` against this Kinenix (`PACKAGE_REQUIRES`).
+- **Where it goes:** `<flows folder>/<name>`, so `kinenix run NAME` and triggers keep working across versions. This machine's `.env`, `config/local.json`, `output/`, and `logs/` stay. `.kinenix-deployed.json` in the folder records the version, the publisher, and when it was installed. Installing the same package again changes nothing; an older version is installed with a note that it goes back.
+- **A folder that was not installed from a package** (copied by hand, a git checkout, or the folder where the flow is written) is replaced only after you answer yes, or with `--replace` in a script. The whole old folder, `.git` included, is kept in `~/.kinenix/packages/<name>/replaced-<time>/`.
+- **A run going on:** the install waits for it to end, at most 30 minutes (`--wait MINUTES`, `--wait 0` not at all), then swaps the folders by renaming. If anything fails, the old version stays whole. On Windows, a file held open (Excel, an Explorer window, a terminal in the folder) blocks the swap; the install retries for about two minutes, then names the file and changes nothing. Kinenix never closes other programs.
+- **Rollback:** the last 10 packages of each flow are kept in `~/.kinenix/packages/<name>/` (`KINENIX_PACKAGES_KEEP` to change). `kinenix rollback` installs the version before the current one, or `--to` a kept version, with the same checks; a package whose publisher is no longer trusted is refused.
+
+Exit codes: 0 installed or already installed; 1 a run did not end in time, a file is in use, or `ssh-keygen` is missing; 2 you answered no, or there was no terminal and no `--replace`; 4 `PACKAGE_UNTRUSTED` or `PACKAGE_DAMAGED`; 5 `PACKAGE_REQUIRES`; 7 the file, the flow, or the version was not found.
+
 ---
 
 ## 3. Command Options & Parameters
