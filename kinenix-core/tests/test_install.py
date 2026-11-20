@@ -93,7 +93,7 @@ def test_lock_of_an_ended_process_does_not_count(tmp_path, monkeypatch):
     folder = tmp_path / "flows" / "demo"
     done = subprocess.run([sys.executable, "-c", "import os; print(os.getpid())"], capture_output=True, text=True)
     dead_pid = int(done.stdout)
-    lock_dir = run_lock.running_dir() / run_lock.flow_key(folder)
+    lock_dir = run_lock.lock_folder(folder)
     lock_dir.mkdir(parents=True)
     (lock_dir / "stale.json").write_text(json.dumps({"pid": dead_pid}), encoding="utf-8")
     assert not run_lock.pid_alive(dead_pid)
