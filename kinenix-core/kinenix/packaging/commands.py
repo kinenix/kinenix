@@ -10,6 +10,8 @@ from typing import Callable, List, Optional
 from .. import exit_codes
 from ..engine.flow_content import version_problem
 from ..engine.markdown import load_flow
+from ..engine.requires import version_key
+from . import install as install_module
 from . import trust
 from .pack import SIZE_WARNING, PackError, build
 from .signing import SigningError, check_name, create_key, default_name, private_key_path, read_public_key
@@ -127,6 +129,75 @@ def pack(flow_input: str, version: Optional[str], output: Optional[str],
     print(f"Recorded version {version} in .kinenix-packed.json; keep that file in git.")
     print(f"Package: {result.path}")
     return exit_codes.OK
+
+
+def _ask_replace(folder: Path, is_source: bool, replace: bool) -> bool:
+    if replace:
+        return True
+    if not install_module.interactive():
+        print(f"{folder} was not installed from a package, and there is no terminal to ask whether to replace "
+              f"it (--replace keeps a copy in {install_module.packages_dir(folder.name)}).", file=sys.stderr)
+        return False
+    if is_source:
+        print(f"{folder} looks like the folder where this flow is written (it has git or "
+              f".kinenix-packed.json). Replacing it puts the package's files in its place.")
+    else:
+        print(f"{folder} was not installed from a package (it was copied or checked out by hand).")
+    print(f"The whole folder is kept in {install_module.packages_dir(folder.name)}/replaced-<time>; "
+          f".env, config/local.json, output/, and logs/ move into the new version.")
+    try:
+        answer = input("Replace it? [y/N] ").strip().lower()
+    except EOFError:
+        answer = ""
+    return answer in ("y", "yes")
+
+
+def _install(package_path: Path, replace: bool, wait: float, rollback: bool = False) -> int:
+    try:
+        package = install_module.open_package(package_path)
+        result = install_module.install(
+            package, lambda folder, source: _ask_replace(folder, source, replace), wait_minutes=wait,
+            on_wait=lambda pids: print(f"Waiting for the run of {package.name} that is going on (process "
+                                       f"{', '.join(map(str, pids))}) to end; Ctrl+C stops waiting."))
+    except install_module.InstallError as e:
+        _err(f"{e} ({e.code})" if e.code.startswith("PACKAGE_") else str(e))
+        return e.exit_code
+    except SigningError as e:
+        _err(str(e))
+        return exit_codes.TECHNICAL
+    except KeyboardInterrupt:
+        _err("Stopped; nothing was changed.")
+        return exit_codes.INTERRUPTED
+    publisher = package.publisher
+    if result.status == "unchanged":
+        print(f"{package.name} {package.version} is already installed in {result.target}.")
+        return exit_codes.OK
+    previous = result.previous_version
+    if previous and not rollback and version_key(previous) and version_key(package.version) < version_key(previous):
+        print(f"Note: {package.version} is older than {previous}, which was installed; this goes back a version.",
+              file=sys.stderr)
+    was = f" (was {previous})" if previous else ""
+    print(f"Installed {package.name} {package.version}{was} in {result.target}, signed by "
+          f"{publisher.name} ({publisher.key_id}).")
+    if result.kept:
+        print(f"Kept this machine's {', '.join(rel + ('/' if rel in ('output', 'logs') else '') for rel in result.kept)}.")
+    if result.replaced_folder:
+        print(f"The folder it replaced is saved in {result.replaced_folder}.")
+    print(f"Run it: kinenix run {package.name}")
+    return exit_codes.OK
+
+
+def install(file: str, replace: bool, wait: float) -> int:
+    return _install(Path(file), replace, wait)
+
+
+def rollback(name: str, to_version: Optional[str], wait: float) -> int:
+    try:
+        package_path = install_module.rollback_package(name, to_version)
+    except install_module.InstallError as e:
+        _err(str(e))
+        return e.exit_code
+    return _install(package_path, replace=False, wait=wait, rollback=True)
 
 
 def trust_add(key_text: Optional[str], name: Optional[str]) -> int:

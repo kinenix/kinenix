@@ -76,11 +76,11 @@ hello-1.3.0.kinx
 - **Turned on by the owner:** `kinenix-worker deploy enable`. Off by default; a worker with deploying off ignores assignments and shows so in its heartbeat. It governs only packages the Hub delivers (1.5.0); `kinenix install` run by a person at the machine does not need it, and the signature is checked either way (decided 2026-11-16).
 - **Delivery:** the worker's long poll (`GET /api/v1/jobs/next`, agent-interface.md section 14) also answers "a new assignment exists". The worker then downloads the package, checks it (section 5), and installs it. Workers before this version never ask and are not affected.
 - **Where it goes:** into the flows folder as `~/kinenix-flows/hello/`, so `kinenix run hello` and existing triggers keep working. A file `.kinenix-deployed.json` in the folder records the package, version, publisher, and install time.
-- **Never over a hand-made folder:** the worker refuses to install into a folder without `.kinenix-deployed.json` (a git checkout or a copied folder), and reports it on the dashboard. `kinenix-worker deploy adopt hello` lets the owner hand that folder to deploying.
+- **A hand-made folder is replaced only when a person agrees** (changed 2026-11-20): a folder without `.kinenix-deployed.json` (a git checkout, a copied folder, or the source folder on the building machine) is replaced by `kinenix install` only after a person answers yes, or with `--replace`. The whole old folder, `.git` included, is first moved to `~/.kinenix/packages/<flow>/replaced-<time>/`, and its `.env`, `config/local.json`, `output/`, and `logs/` move into the new version. A delivery from the Hub (1.5.0) never replaces such a folder; it reports it on the dashboard. There is no `deploy adopt`.
 - **Kept across updates:** `.env`, `config/local.json`, `output/`, and `logs/`. Everything else is replaced.
-- **Atomic:** the new version is unpacked next to the folder and swapped in by renaming; a run that is going on finishes on the files it started with, and the swap waits until it ends.
+- **Atomic:** the new version is unpacked next to the folder and swapped in by renaming; a run that is going on finishes on the files it started with, and the swap waits until it ends: at most 30 minutes by default (`kinenix install --wait MINUTES`), after which nothing changes and the install can be tried again.
 - **Files in use on Windows** (decided 2026-11-14): Windows cannot rename a folder while a program holds a file in it open (Excel with `assets/template.xlsx`, Explorer or a terminal in the folder, antivirus or OneDrive scanning it). The worker retries the swap for about two minutes, since scans let go by themselves. If it still fails, the old version stays whole, the dashboard shows `hello 1.3.0 not installed: assets/template.xlsx is in use`, and the worker tries again at its next poll. The worker never closes or kills other programs: that could lose a person's unsaved work.
-- **Rollback:** the last packages are kept in `~/.kinenix/packages/<flow>/`. Assigning an older version on the dashboard installs it again; `kinenix-worker deploy rollback hello` does it on the machine without the Hub.
+- **Rollback:** the last packages are kept in `~/.kinenix/packages/<flow>/`. Assigning an older version on the dashboard installs it again; `kinenix rollback hello [--to 1.2.0]` does it on the machine without the Hub (in `kinenix`, so a machine with only `kinenix` can go back too; changed 2026-11-20). It checks the stored package again against the publishers trusted now.
 - **Machine settings:** `config/local.json` belongs to the flow folder on one machine and is merged over `config/config.json` key by key, as `kinenix run --config` does today, for values that differ per machine (folders, printer names, a test or production site). Secrets stay in `.env`. Every run reads it again (decided 2026-11-14), for every flow, deployed or not, so a change takes effect at the next run and a flow behaves the same on the building machine and on a worker. `kinenix init` adds it to the project's `.gitignore`.
 
 ## 8. What the dashboard shows
@@ -115,7 +115,7 @@ A flow is still code (T1): a trusted publisher can still sign a harmful flow. Si
 | `kinenix publish FILE` | building machine | Uploads a package to the Hub |
 | `kinenix hub deploy FLOW VERSION --worker W` | Hub or any connected machine | Assigns a version to workers (dashboard password) |
 | `kinenix trust add / list / remove` | any machine | Publishers this machine accepts (1.3.0) |
-| `kinenix-worker deploy adopt / rollback` | worker | Hand a hand-made folder to deploying / install the previous package again (1.3.0) |
+| `kinenix rollback FLOW [--to V]` | any machine | Installs a kept package again, by default the version before the one installed (1.3.0) |
 | `kinenix-worker deploy enable / disable / status` | worker | Accept packages the Hub delivers (1.5.0) |
 
 ## 11. Relation to job dispatch and triggers
@@ -165,6 +165,12 @@ All of it is additions: new commands, endpoints, tables, and heartbeat fields; n
 - **`@shared/` subflows in a package** sit under `@shared/` in the flow folder, the first place a `flow.call` to `@shared/...` looks, so `flow.md` is not rewritten.
 - **OpenSSH 8.1**, the first version with `ssh-keygen -Y sign`. A signature is checked against the key named by the manifest's key id, so `-Y find-principals` (newer) is not needed.
 - **Agents** do not pack, sign, trust, or install (section 11).
+
+2026-11-20, for part 2:
+
+- **Hand-made folders:** `kinenix install` replaces one after a yes or `--replace`, keeping the whole old folder; `deploy adopt` is dropped (section 7).
+- **Rollback** is `kinenix rollback`, not `kinenix-worker deploy rollback` (section 7). `kinenix-worker deploy` keeps only `enable / disable / status` for 1.5.0.
+- **Waiting for a run:** 30 minutes by default, `--wait` to change (section 7).
 
 Open: none.
 

@@ -197,7 +197,7 @@ Noted on 2026-10-16 and not scheduled yet; correctness comes first (0.3.0b1 to 0
 - [x] `config/local.json` for settings that differ per machine (#233)
 - [x] `> Version:` in `flow.md`; `validate` reports a flow that changed but kept its version (#234)
 - [x] `kinenix publisher init / show`, `kinenix pack`, and `kinenix trust add / list / remove` (#235, part 1)
-- [ ] `kinenix install`, `kinenix-worker deploy adopt / rollback`, and files in use on Windows (#235, part 2)
+- [x] `kinenix install`, `kinenix rollback`, a run lock that install waits for, and files in use on Windows (#235, part 2)
 
 ### 1.4.0: Daily results you can trust
 

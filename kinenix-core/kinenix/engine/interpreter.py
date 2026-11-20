@@ -17,6 +17,7 @@ from .action_errors import explain as explain_action_error
 from .web_errors import explain as explain_web_error
 from .local_config import LocalConfigError, read_local_config
 from .requires import requirement_problem
+from . import run_lock
 from .stopping import RunStopped, stop_requested
 from .stopping import wait as wait_or_stop
 from .. import __version__
@@ -331,6 +332,14 @@ class FlowInterpreter:
         )
 
     def run_flow(self, flow_def: FlowDefinition, initial_vars: Optional[Dict[str, Any]] = None) -> ExecutionContext:
+        # A top-level run of a flow folder is marked in ~/.kinenix/running, so kinenix install waits for it
+        flow_dir = (initial_vars or {}).get("__flow_dir__")
+        if self.call_stack or not flow_dir:
+            return self._run_flow(flow_def, initial_vars)
+        with run_lock.hold(Path(flow_dir)):
+            return self._run_flow(flow_def, initial_vars)
+
+    def _run_flow(self, flow_def: FlowDefinition, initial_vars: Optional[Dict[str, Any]] = None) -> ExecutionContext:
         context = ExecutionContext(flow_name=flow_def.name)
 
         # One Redactor per top-level run, shared with its subflows through the logger; actions reach it
